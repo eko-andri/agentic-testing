@@ -93,6 +93,22 @@
         </div>
         <button type="submit">Submit</button>
       </form>
+      <button id="fetch-models-btn" type="button" style="margin-top: 1.5rem">
+        Show Bedrock Models
+      </button>
+      <div style="margin-top: 0.7rem">
+        <label for="bedrock-models-list" style="font-weight: 600"
+          >Available Bedrock Models:</label
+        >
+        <textarea
+          id="bedrock-models-list"
+          rows="6"
+          readonly
+          style="width: 100%; margin-top: 0.2rem"></textarea>
+      </div>
+      <div
+        id="bedrock-models-error"
+        style="color: #c0392b; font-size: 0.98rem; margin-top: 0.3rem"></div>
       <div id="response-container">
         <p id="response-placeholder">Processing...</p>
       </div>

@@ -42,3 +42,48 @@ document
       responseContainer.style.color = "#c0392b";
     }
   });
+
+// Handler untuk tombol fetch Bedrock Models
+const fetchModelsBtn = document.getElementById("fetch-models-btn");
+const modelsListField = document.getElementById("bedrock-models-list");
+const modelsErrorDiv = document.getElementById("bedrock-models-error");
+
+if (fetchModelsBtn) {
+  fetchModelsBtn.addEventListener("click", async () => {
+    modelsListField.value = "";
+    modelsErrorDiv.textContent = "";
+    fetchModelsBtn.disabled = true;
+    fetchModelsBtn.textContent = "Loading...";
+    try {
+      const res = await fetch("http://localhost:3333/api/bedrock-models");
+      const contentType = res.headers.get("content-type");
+      if (!res.ok) {
+        let errMsg = "Unknown error";
+        if (contentType && contentType.includes("application/json")) {
+          const err = await res.json();
+          errMsg = err.error || errMsg;
+        } else {
+          errMsg = await res.text();
+        }
+        throw new Error(errMsg);
+      }
+      if (contentType && contentType.includes("application/json")) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          modelsListField.value = data
+            .map((m) => `${m.modelId} - ${m.modelName || ""}`)
+            .join("\n");
+        } else {
+          modelsListField.value = JSON.stringify(data, null, 2);
+        }
+      } else {
+        throw new Error("API did not return JSON. Response: " + (await res.text()));
+      }
+    } catch (err) {
+      modelsErrorDiv.textContent = "Error: " + (err.message || err);
+    } finally {
+      fetchModelsBtn.disabled = false;
+      fetchModelsBtn.textContent = "Show Bedrock Models";
+    }
+  });
+}

@@ -41,7 +41,7 @@ async function callOllamaLLM({
         system,
         options: { temperature },
       },
-      { timeout: 60_000 }
+      { timeout: 600_000 }
     );
     return response.data.response.trim();
   } catch (error) {
