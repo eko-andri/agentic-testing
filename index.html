@@ -4,145 +4,99 @@
     <meta charset="UTF-8" />
     <title>Agentic Testing</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 2rem;
-        background: #f9f9f9;
-        color: #222;
-      }
-      header {
-        margin-bottom: 2rem;
-      }
-      h1 {
-        color: #2c3e50;
-      }
-      main {
-        background: #fff;
-        padding: 2rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-      }
-      .test-result {
-        margin-top: 1.5rem;
-        padding: 1rem;
-        border-radius: 5px;
-        background: #eafaf1;
-        color: #27ae60;
-        font-weight: bold;
-        display: none;
-      }
-      button {
-        background: #2980b9;
-        color: #fff;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 4px;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: background 0.2s;
-      }
-      button:hover {
-        background: #1c5980;
-      }
-      form {
-        margin-top: 2rem;
-      }
-      label {
-        font-weight: bold;
-      }
-      input[type="text"] {
-        width: 70%;
-        padding: 0.5rem;
-        margin-top: 0.5rem;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-      }
-      #promptResult {
-        margin-top: 1rem;
-        min-height: 2rem;
-        background: #f4f4f4;
-        padding: 1rem;
-        border-radius: 5px;
-      }
-    </style>
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <header>
       <h1>Agentic Testing Demo</h1>
-      <p>Click the button below to run a simple agentic test.</p>
+      <p>
+        Submit a ticket description and acceptance criteria to generate E2E test
+        scenarios automatically.
+      </p>
     </header>
     <main>
-      <button id="runTestBtn">Run Test</button>
-      <div class="test-result" id="testResult"></div>
-      <!-- Form untuk mengetik prompt -->
-      <form id="promptForm">
-        <label for="promptInput">Masukkan prompt untuk diuji:</label><br />
-        <input type="text" id="promptInput" name="promptInput" required /><br />
-        <button type="submit" style="margin-left: 1rem">Kirim Prompt</button>
-      </form>
-      <!-- Tempat menampilkan hasil dari model -->
-      <div id="promptResult"></div>
-    </main>
-    <script>
-      document
-        .getElementById("runTestBtn")
-        .addEventListener("click", function () {
-          // Example agentic test: check if 2 + 2 === 4
-          const result = 2 + 2 === 4;
-          const testResultDiv = document.getElementById("testResult");
-          if (result) {
-            testResultDiv.textContent = "Test passed: 2 + 2 equals 4.";
-            testResultDiv.style.background = "#eafaf1";
-            testResultDiv.style.color = "#27ae60";
-          } else {
-            testResultDiv.textContent = "Test failed: 2 + 2 does not equal 4.";
-            testResultDiv.style.background = "#fdecea";
-            testResultDiv.style.color = "#c0392b";
-          }
-          testResultDiv.style.display = "block";
-        });
+      <form id="e2e-form">
+        <div class="row-fields">
+          <div class="field-group">
+            <label for="ticket-number">Ticket Number:</label>
+            <input
+              type="text"
+              id="ticket-number"
+              name="ticketNumber"
+              required />
+          </div>
+          <div class="field-group">
+            <label for="ticket-type">Ticket Type:</label>
+            <select id="ticket-type" name="ticketType" required>
+              <option value="feature">Feature</option>
+              <option value="bug">Bug</option>
+            </select>
+          </div>
+        </div>
 
-      // Script untuk mengirim prompt ke aplikasi Node.js di port 3333
-      document
-        .getElementById("promptForm")
-        .addEventListener("submit", async function (e) {
-          e.preventDefault();
-          const prompt = document.getElementById("promptInput").value;
-          const resultDiv = document.getElementById("promptResult");
-          resultDiv.textContent = "Memproses...";
-          try {
-            const response = await fetch("http://localhost:3333/api/run-e2e", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ inputText: prompt }),
-            });
-            const data = await response.json();
-            if (data.success) {
-              let testPlan = data.testPlan;
-              if (typeof testPlan === "string") {
-                // Ganti \n atau \r\n dengan <br> agar pindah paragraf rapi
-                testPlan = testPlan.replace(/\r?\n/g, "<br>");
-                // Hapus tanda kutip di awal/akhir jika ada
-                testPlan = testPlan.replace(/^"|"$/g, "");
-              }
-              resultDiv.innerHTML =
-                "<b>Test Plan:</b> " +
-                testPlan +
-                "<br><b>Test File:</b> " +
-                (data.testFile || "-") +
-                "<br><b>Test Result:</b> " +
-                (data.testResult ? JSON.stringify(data.testResult) : "-") +
-                "<br><b>Doc Path:</b> " +
-                (data.docPath || "-");
-            } else {
-              resultDiv.textContent =
-                data.error || "Tidak ada hasil dari model.";
-            }
-          } catch (err) {
-            resultDiv.textContent = "Terjadi kesalahan saat mengirim prompt.";
-          }
-        });
-    </script>
+        <div class="field-group">
+          <label for="description">Description:</label>
+          <textarea
+            id="description"
+            name="description"
+            rows="4"
+            required></textarea>
+        </div>
+
+        <div class="field-group">
+          <label for="how-to-reproduce">How to Reproduce (if bug):</label>
+          <textarea
+            id="how-to-reproduce"
+            name="howToReproduce"
+            rows="4"></textarea>
+        </div>
+
+        <div class="field-group">
+          <label for="acceptance-criteria">Acceptance Criteria:</label>
+          <textarea
+            id="acceptance-criteria"
+            name="acceptanceCriteria"
+            rows="4"
+            required></textarea>
+        </div>
+
+        <label>Extras (Performance, Security, Accessibility):</label>
+        <div class="extras-group">
+          <label
+            ><input
+              type="checkbox"
+              id="performance"
+              name="extras"
+              value="performance" />
+            Performance</label
+          >
+          <label
+            ><input
+              type="checkbox"
+              id="security"
+              name="extras"
+              value="security" />
+            Security</label
+          >
+          <label
+            ><input
+              type="checkbox"
+              id="accessibility"
+              name="extras"
+              value="accessibility" />
+            Accessibility</label
+          >
+          <label
+            ><input type="checkbox" name="extras" value="negative-cases" />
+            Include negative/error cases</label
+          >
+        </div>
+        <button type="submit">Submit</button>
+      </form>
+      <div id="response-container">
+        <p id="response-placeholder">Processing...</p>
+      </div>
+    </main>
+    <script src="main.js"></script>
   </body>
 </html>

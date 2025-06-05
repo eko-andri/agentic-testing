@@ -3,15 +3,16 @@ const axios = require("axios");
 
 const AI = {
   qwen2_5: {
-    latest: "qwen2.5-coder:7b",
+    latest: "qwen2.5-coder:latest",
     small: "qwen2.5-coder:1b",
     medium: "qwen2.5-coder:3b",
+    large: "qwen2.5-coder:7b",
   },
 };
 
 async function callOllamaLLM({
   prompt,
-  model = AI.qwen2_5.medium,
+  model = AI.qwen2_5.large,
   system = "",
   temperature = 0.6,
 }) {
