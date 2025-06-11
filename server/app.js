@@ -14,7 +14,11 @@ const {
 const {
   getCurrentProgress,
   getProgressIfChanged,
+  setCurrentProgress,
 } = require("./agents/utils/progressStatus");
+const fs = require("fs");
+const path = require("path");
+const { runPlaywrightTest } = require("./agents/testRunner");
 
 const app = express();
 app.use(cors());
@@ -140,6 +144,63 @@ app.get("/api/progress", (req, res) => {
     clearInterval(interval);
     res.end();
   });
+});
+
+app.post("/api/generate-and-run-test", async (req, res) => {
+  try {
+    let { playwrightCode } = req.body;
+    if (
+      !playwrightCode ||
+      typeof playwrightCode !== "string" ||
+      playwrightCode.trim() === ""
+    ) {
+      setCurrentProgress({
+        status: "Error: No Playwright code provided.",
+        prompt: playwrightCode,
+      });
+      return res
+        .status(400)
+        .json({ success: false, error: "No Playwright code provided." });
+    }
+    setCurrentProgress({ status: "Generating test file...", prompt: playwrightCode });
+    // Hapus baris backtick pembuka jika ada
+    if (playwrightCode.startsWith('```javascript')) {
+      playwrightCode = playwrightCode.replace(/^```javascript\s*/, '');
+    }
+    if (playwrightCode.startsWith('```')) {
+      playwrightCode = playwrightCode.replace(/^```\s*/, '');
+    }
+    // Hapus baris backtick penutup jika ada
+    if (playwrightCode.trim().endsWith('```')) {
+      playwrightCode = playwrightCode.replace(/```\s*$/, '');
+    }
+    // Simpan kode ke file baru di folder tests
+    const fileName = `test_auto_${Date.now()}.spec.js`;
+    const filePath = path.join(__dirname, "./tests", fileName);
+    fs.writeFileSync(filePath, playwrightCode, "utf8");
+    setCurrentProgress({ status: "Running test file...", prompt: playwrightCode });
+    // Jalankan test menggunakan testRunner
+    let output = "";
+    try {
+      const result = await runPlaywrightTest(filePath);
+      console.log("[Generate & Run Test] Playwright result:", result);
+      output =
+        typeof result === "string" ? result : JSON.stringify(result, null, 2);
+      setCurrentProgress({ status: "Test finished.", prompt: playwrightCode });
+      res.json({ success: true, output, file: fileName });
+    } catch (err) {
+      setCurrentProgress({ status: "Error running test file.", prompt: playwrightCode });
+      console.error("[Generate & Run Test] Playwright error:", err);
+      res.json({ success: false, error: err.message || err });
+    }
+  } catch (err) {
+    setCurrentProgress({
+      status: "Error running test file.",
+      prompt: req.body?.playwrightCode || "",
+    });
+    console.error("[Generate & Run Test] General error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 const PORT = process.env.PORT || 3333;
