@@ -11,6 +11,10 @@ const {
   BedrockRuntimeClient,
   InvokeModelCommand,
 } = require("@aws-sdk/client-bedrock-runtime");
+const {
+  getCurrentProgress,
+  getProgressIfChanged,
+} = require("./agents/utils/progressStatus");
 
 const app = express();
 app.use(cors());
@@ -106,6 +110,36 @@ app.get("/api/bedrock-models", async (req, res) => {
     console.error("Error:", error);
     res.status(500).json({ error: "Failed to list models" });
   }
+});
+
+let currentProgress = "Idle";
+
+app.get("/api/progress", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  // Kirim status awal jika bukan idle
+  let lastStatus = null;
+  const sendStatus = () => {
+    const progress = getProgressIfChanged();
+    if (
+      progress &&
+      (progress.status !== lastStatus?.status ||
+        progress.prompt !== lastStatus?.prompt)
+    ) {
+      res.write(`data: ${JSON.stringify(progress)}\n\n`);
+      lastStatus = { ...progress };
+    }
+  };
+  sendStatus();
+  const interval = setInterval(sendStatus, 1000);
+
+  req.on("close", () => {
+    clearInterval(interval);
+    res.end();
+  });
 });
 
 const PORT = process.env.PORT || 3333;

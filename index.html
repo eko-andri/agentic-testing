@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="style.css" />
   </head>
-  <body>
+  <body style="margin: 0; padding: 0; background: #f4f6fb; min-height: 100vh">
     <header>
       <h1>Agentic Testing Demo</h1>
       <p>
@@ -14,105 +14,166 @@
         scenarios automatically.
       </p>
     </header>
-    <main>
-      <form id="e2e-form">
-        <div class="row-fields">
-          <div class="field-group">
-            <label for="ticket-number">Ticket Number:</label>
-            <input
-              type="text"
-              id="ticket-number"
-              name="ticketNumber"
-              required />
+    <div
+      style="
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: 90vh;
+      ">
+      <main
+        style="
+          display: flex;
+          gap: 0;
+          align-items: flex-start;
+          background: #f7fafd;
+          border-radius: 14px;
+          box-shadow: 0 4px 24px rgba(44, 62, 80, 0.08);
+          margin: 2.5rem 0;
+          min-width: 800px;
+          max-width: 1100px;
+          width: 100%;
+        ">
+        <!-- Kolom 1: Form -->
+        <div
+          style="
+            flex: 1 1 0;
+            min-width: 340px;
+            padding: 2.5rem 2rem 2.5rem 2.5rem;
+          ">
+          <form id="e2e-form">
+            <div class="row-fields">
+              <div class="field-group">
+                <label for="ticket-number">Ticket Number:</label>
+                <!-- <input
+                  type="text"
+                  id="ticket-number"
+                  name="ticketNumber"
+                  required /> -->
+                <input
+                  id="ticket-number"
+                  name="ticketNumber"
+                  type="text"
+                  value="123" />
+              </div>
+              <div class="field-group">
+                <label for="ticket-type">Ticket Type:</label>
+                <select id="ticket-type" name="ticketType" required>
+                  <option value="feature">Feature</option>
+                  <option value="bug">Bug</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label for="description">Description:</label>
+              <!-- <textarea
+                id="description"
+                name="description"
+                rows="4"
+                required></textarea> -->
+              <textarea id="description" name="description" rows="4">
+Customer wants a policy holder date of birth is start from 16 years</textarea
+              >
+            </div>
+
+            <div class="field-group">
+              <label for="how-to-reproduce">How to Reproduce (if bug):</label>
+              <textarea
+                id="how-to-reproduce"
+                name="howToReproduce"
+                rows="4"></textarea>
+            </div>
+
+            <div class="field-group">
+              <label for="acceptance-criteria">Acceptance Criteria:</label>
+              <!-- <textarea
+                id="acceptance-criteria"
+                name="acceptanceCriteria"
+                rows="4"
+                required></textarea> -->
+              <textarea
+                id="acceptance-criteria"
+                name="acceptanceCriteria"
+                rows="4">
+1. DOB minimum is 16 instead of 18
+2. previous validation should still work (dob field only accept date, dob is required, can not be empty)</textarea
+              >
+            </div>
+
+            <label>Extras (Performance, Security, Accessibility):</label>
+            <div class="extras-group">
+              <label
+                ><input
+                  type="checkbox"
+                  id="performance"
+                  name="extras"
+                  value="performance" />
+                Performance</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  id="security"
+                  name="extras"
+                  value="security" />
+                Security</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  id="accessibility"
+                  name="extras"
+                  value="accessibility" />
+                Accessibility</label
+              >
+              <label
+                ><input type="checkbox" name="extras" value="negative-cases" />
+                Include negative/error cases</label
+              >
+            </div>
+            <button type="submit">Submit</button>
+          </form>
+        </div>
+        <!-- Pembatas vertikal -->
+        <div
+          style="
+            width: 2px;
+            background: linear-gradient(180deg, #e0e6ed 60%, #b2bec3 100%);
+            min-height: 80vh;
+            margin: 0 0.5rem;
+          "></div>
+        <!-- Kolom 2: Status & Response -->
+        <div
+          style="
+            flex: 1 1 0;
+            min-width: 340px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            padding: 2.5rem 2.5rem 2.5rem 2rem;
+            align-items: stretch;
+          ">
+          <!-- Response Container -->
+          <div
+            id="response-container"
+            style="
+              background: #f9f9f9;
+              border: 1.5px solid #cfd8dc;
+              border-radius: 8px;
+              min-height: 180px;
+              padding: 1.2rem 1.2rem 1.2rem 1.2rem;
+              font-size: 1.05rem;
+              word-break: break-word;
+              display: flex;
+              flex-direction: column;
+              justify-content: flex-start;
+            ">
+            <p id="response-placeholder">Waiting for agent response...</p>
           </div>
-          <div class="field-group">
-            <label for="ticket-type">Ticket Type:</label>
-            <select id="ticket-type" name="ticketType" required>
-              <option value="feature">Feature</option>
-              <option value="bug">Bug</option>
-            </select>
-          </div>
         </div>
-
-        <div class="field-group">
-          <label for="description">Description:</label>
-          <textarea
-            id="description"
-            name="description"
-            rows="4"
-            required></textarea>
-        </div>
-
-        <div class="field-group">
-          <label for="how-to-reproduce">How to Reproduce (if bug):</label>
-          <textarea
-            id="how-to-reproduce"
-            name="howToReproduce"
-            rows="4"></textarea>
-        </div>
-
-        <div class="field-group">
-          <label for="acceptance-criteria">Acceptance Criteria:</label>
-          <textarea
-            id="acceptance-criteria"
-            name="acceptanceCriteria"
-            rows="4"
-            required></textarea>
-        </div>
-
-        <label>Extras (Performance, Security, Accessibility):</label>
-        <div class="extras-group">
-          <label
-            ><input
-              type="checkbox"
-              id="performance"
-              name="extras"
-              value="performance" />
-            Performance</label
-          >
-          <label
-            ><input
-              type="checkbox"
-              id="security"
-              name="extras"
-              value="security" />
-            Security</label
-          >
-          <label
-            ><input
-              type="checkbox"
-              id="accessibility"
-              name="extras"
-              value="accessibility" />
-            Accessibility</label
-          >
-          <label
-            ><input type="checkbox" name="extras" value="negative-cases" />
-            Include negative/error cases</label
-          >
-        </div>
-        <button type="submit">Submit</button>
-      </form>
-      <button id="fetch-models-btn" type="button" style="margin-top: 1.5rem">
-        Show Bedrock Models
-      </button>
-      <div style="margin-top: 0.7rem">
-        <label for="bedrock-models-list" style="font-weight: 600"
-          >Available Bedrock Models:</label
-        >
-        <textarea
-          id="bedrock-models-list"
-          rows="6"
-          readonly
-          style="width: 100%; margin-top: 0.2rem"></textarea>
-      </div>
-      <div
-        id="bedrock-models-error"
-        style="color: #c0392b; font-size: 0.98rem; margin-top: 0.3rem"></div>
-      <div id="response-container">
-        <p id="response-placeholder">Processing...</p>
-      </div>
-    </main>
+      </main>
+    </div>
     <script src="main.js"></script>
   </body>
 </html>

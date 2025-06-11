@@ -3,6 +3,12 @@ const axios = require("axios");
 
 const AI = {
   qwen2_5: {
+    latest: "qwen2.5:latest",
+    small: "qwen2.5:1b",
+    medium: "qwen2.5:3b",
+    large: "qwen2.5:7b",
+  },
+  qwen2_5coder: {
     latest: "qwen2.5-coder:latest",
     small: "qwen2.5-coder:1b",
     medium: "qwen2.5-coder:3b",
@@ -12,9 +18,9 @@ const AI = {
 
 async function callOllamaLLM({
   prompt,
-  model = AI.qwen2_5.large,
+  model = AI.qwen2_5.latest,
   system = "",
-  temperature = 0.6,
+  temperature = 0.2,
 }) {
   // Validasi sederhana (opsional, hanya untuk keamanan input)
   if (!prompt || typeof prompt !== "string" || prompt.trim() === "") {

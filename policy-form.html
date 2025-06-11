@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Policy Form Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main
+      style="
+        max-width: 400px;
+        margin: 2rem auto;
+        background: #fff;
+        padding: 2rem 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 24px rgba(44, 62, 80, 0.08);
+      ">
+      <h2>Policy Form (Test DOB)</h2>
+      <form id="policy-form" novalidate>
+        <div class="field-group">
+          <label for="dob">Date of Birth (DOB):</label>
+          <input type="date" id="dob" name="dob" required />
+        </div>
+        <button type="submit">Submit</button>
+        <div id="form-message" style="margin-top: 1rem"></div>
+      </form>
+    </main>
+    <script>
+      document
+        .getElementById("policy-form")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          const dob = document.getElementById("dob").value;
+          const msg = document.getElementById("form-message");
+          if (!dob) {
+            msg.textContent = "DOB field is required and cannot be empty.";
+            msg.className = "error-message";
+            return;
+          }
+          const dobDate = new Date(dob);
+          const now = new Date();
+          let age = now.getFullYear() - dobDate.getFullYear();
+          const m = now.getMonth() - dobDate.getMonth();
+          if (m < 0 || (m === 0 && now.getDate() < dobDate.getDate())) {
+            age--;
+          }
+
+          if (isNaN(dobDate.getTime())) {
+            msg.textContent = "DOB field must accept only dates.";
+            msg.className = "error-message";
+            return;
+          }
+          if (age < 16) {
+            msg.textContent = "Minimum age requirement not met.";
+            msg.className = "error-message";
+            return;
+          }
+          msg.textContent = "Form submitted successfully.";
+          msg.className = "success-message";
+        });
+    </script>
+  </body>
+</html>
