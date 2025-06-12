@@ -70,6 +70,7 @@ app.post("/api/run-e2e", async (req, res) => {
     description,
     howToReproduce,
     acceptanceCriteria,
+    testUrl,
     extras,
   } = req.body;
   console.log("Received request to run E2E pipeline", {
@@ -78,6 +79,7 @@ app.post("/api/run-e2e", async (req, res) => {
     description,
     howToReproduce,
     acceptanceCriteria,
+    testUrl,
     extras,
   });
   console.log("Request body:", req.body);
@@ -92,6 +94,7 @@ app.post("/api/run-e2e", async (req, res) => {
       description,
       howToReproduce,
       acceptanceCriteria,
+      testUrl,
       extras,
       maxRetries: 5, // can be adjusted
     });
@@ -162,23 +165,24 @@ app.post("/api/generate-and-run-test", async (req, res) => {
         .status(400)
         .json({ success: false, error: "No Playwright code provided." });
     }
-    setCurrentProgress({ status: "Generating test file...", prompt: playwrightCode });
-    // Hapus baris backtick pembuka jika ada
-    if (playwrightCode.startsWith('```javascript')) {
-      playwrightCode = playwrightCode.replace(/^```javascript\s*/, '');
-    }
-    if (playwrightCode.startsWith('```')) {
-      playwrightCode = playwrightCode.replace(/^```\s*/, '');
-    }
-    // Hapus baris backtick penutup jika ada
-    if (playwrightCode.trim().endsWith('```')) {
-      playwrightCode = playwrightCode.replace(/```\s*$/, '');
-    }
+    setCurrentProgress({
+      status: "Generating test file...",
+      prompt: playwrightCode,
+    });
+    // Hapus baris backtick pembuka/penutup jika ada
+    playwrightCode = playwrightCode.replace(/```[a-z]*|```/gi, "").trim();
+    // Hapus HTML jika ada (jika LLM masih bandel)
+    playwrightCode = playwrightCode
+      .replace(/<html[\s\S]*?<\/html>/gi, "")
+      .trim();
     // Simpan kode ke file baru di folder tests
     const fileName = `test_auto_${Date.now()}.spec.js`;
     const filePath = path.join(__dirname, "./tests", fileName);
     fs.writeFileSync(filePath, playwrightCode, "utf8");
-    setCurrentProgress({ status: "Running test file...", prompt: playwrightCode });
+    setCurrentProgress({
+      status: "Running test file...",
+      prompt: playwrightCode,
+    });
     // Jalankan test menggunakan testRunner
     let output = "";
     try {
@@ -189,7 +193,10 @@ app.post("/api/generate-and-run-test", async (req, res) => {
       setCurrentProgress({ status: "Test finished.", prompt: playwrightCode });
       res.json({ success: true, output, file: fileName });
     } catch (err) {
-      setCurrentProgress({ status: "Error running test file.", prompt: playwrightCode });
+      setCurrentProgress({
+        status: "Error running test file.",
+        prompt: playwrightCode,
+      });
       console.error("[Generate & Run Test] Playwright error:", err);
       res.json({ success: false, error: err.message || err });
     }

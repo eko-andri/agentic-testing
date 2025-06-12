@@ -1,5 +1,7 @@
 const promptEngineer = require("./promptEngineer");
 const criticAgent = require("./criticAgent");
+const { contextAgent } = require("./contextAgent");
+const { analyzeFormContext } = require("./formContextAnalyzer");
 const { testGenerator, generateTestCode } = require("./testGenerator");
 const { runPlaywrightTest } = require("./testRunner");
 const fs = require("fs");
@@ -17,6 +19,7 @@ async function orchestrateTestPlan({
   description,
   howToReproduce,
   acceptanceCriteria,
+  testUrl,
   extras = [],
   maxRetries = 3,
   ticketNumber = "auto",
@@ -26,9 +29,68 @@ async function orchestrateTestPlan({
   let testPlanFeedback = "";
   let attempts = 0;
   let improvedPromptSuffix = "";
-
   setCurrentProgress("Reading requirements...");
-  console.log("[Progress] Reading requirements...");
+  console.log("[Progress] Reading requirements..."); // 0. Context Analysis - cek kelengkapan requirement sebelum proses
+  let contextIncomplete = false;
+  try {
+    const contextAnalysis = await contextAgent(description, acceptanceCriteria);
+    if (!contextAnalysis.isComplete) {
+      contextIncomplete = true;
+      console.log(
+        "[Progress] Context incomplete, will try form context analyzer..."
+      );
+    }
+  } catch (err) {
+    console.error("[ERROR] Context analysis failed:", err);
+    // Jika context agent gagal, lanjutkan proses normal
+  }
+  // 0.5. Form Context Analysis - analisa struktur form dari URL
+  let formContext = null;
+  try {
+    setCurrentProgress(
+      "Form Context Analyzer:\nAnalyzing form structure from URL..."
+    );
+    console.log("[Progress] Analyzing form structure from URL:", testUrl);
+    formContext = await analyzeFormContext(testUrl);
+    setCurrentProgress(
+      "Form Context Analyzer:\nForm structure analysis complete."
+    );
+    console.log("[Progress] Form context extracted:", formContext);
+
+    // Jika context was incomplete tapi form analyzer berhasil, evaluasi ulang
+    if (
+      contextIncomplete &&
+      formContext &&
+      formContext.fields &&
+      Object.keys(formContext.fields).length > 0
+    ) {
+      setCurrentProgress(
+        "Form Context Analyzer:\nForm analysis provided missing context - proceeding..."
+      );
+      console.log(
+        "[Progress] Form analyzer compensated for incomplete context"
+      );
+      contextIncomplete = false; // Override context incomplete status
+    }
+  } catch (err) {
+    console.error("[ERROR] Form context analysis failed:", err);
+    setCurrentProgress(
+      "Form Context Analyzer:\nWarning: Could not analyze form structure."
+    );
+    // Jika form analyzer gagal, lanjutkan tanpa form context
+  }
+
+  // Jika masih incomplete setelah form analyzer, kembalikan error ke user
+  if (contextIncomplete) {
+    return {
+      success: false,
+      error: "Incomplete requirement context",
+      message:
+        "Please provide more specific details about date formats and form selectors, or ensure the URL contains a valid form structure.",
+      requiresUserInput: true,
+    };
+  }
+
   // 1. Cek history requirement
   const history = loadRequirementHistory(ticketType);
   const currentReq = { description, acceptanceCriteria };
@@ -97,7 +159,8 @@ async function orchestrateTestPlan({
         description + improvedPromptSuffix,
         extras,
         howToReproduce,
-        acceptanceCriteria
+        acceptanceCriteria,
+        formContext // Hanya gunakan form context, tidak perlu extracted context lagi
       );
       // Logging prompt ke criticAgent
       console.log("[LOG] Prompt to criticAgent:\n", testPlan);
@@ -124,7 +187,11 @@ async function orchestrateTestPlan({
       try {
         // Logging prompt ke testGenerator
         console.log("[LOG] Prompt to testGenerator:\n", testPlan);
-        playwrightCode = await testGenerator(testPlan);
+        playwrightCode = await testGenerator(
+          testPlan,
+          testUrl,
+          formContext // Hanya gunakan form context
+        );
         return {
           success: true,
           attempts,

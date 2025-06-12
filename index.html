@@ -141,6 +141,22 @@ Customer wants a policy holder date of birth is start from 16 years</textarea
                 Include negative/error cases</label
               >
             </div>
+
+            <div class="field-group">
+              <label for="test-url">Test URL:</label>
+              <input
+                type="url"
+                id="test-url"
+                name="testUrl"
+                placeholder="https://example.com/form"
+                value="http://127.0.0.1:5500/policy-form.html"
+                required />
+              <small
+                >URL yang akan dites oleh Playwright (contoh: form, halaman
+                login, dll.)</small
+              >
+            </div>
+
             <button type="submit" class="btn-main">Submit</button>
             <button
               type="button"

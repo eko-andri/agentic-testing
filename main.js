@@ -11,6 +11,7 @@ document
       description: document.getElementById("description").value,
       howToReproduce: document.getElementById("how-to-reproduce").value,
       acceptanceCriteria: document.getElementById("acceptance-criteria").value,
+      testUrl: document.getElementById("test-url").value,
       extras: extras,
     };
     window.lastFormData = formData;
@@ -86,9 +87,28 @@ document
         responseContainer.style.background = "#eafaf1";
         responseContainer.style.color = "#27ae60";
       } else {
-        responsePlaceholder.textContent = `Error: ${result.error}`;
-        responseContainer.style.background = "#fdecea";
-        responseContainer.style.color = "#c0392b";
+        // Khusus untuk error dari context agent
+        if (result.requiresUserInput && result.contextAnalysis) {
+          responsePlaceholder.innerHTML = `
+            <div style='font-weight:600;color:#e67e22;margin-bottom:0.8em;'>
+              ⚠️ Requirement Incomplete
+            </div>
+            <div style='background:#fef9e7;border:1px solid #f39c12;border-radius:6px;padding:1em;'>
+              <div style='font-weight:600;margin-bottom:0.5em;color:#e67e22;'>
+                Context Agent Analysis:
+              </div>
+              <div style='white-space:pre-line;line-height:1.6;color:#b7950b;'>
+                ${result.message}
+              </div>
+            </div>
+          `;
+          responseContainer.style.background = "#fef9e7";
+          responseContainer.style.color = "#e67e22";
+        } else {
+          responsePlaceholder.textContent = `Error: ${result.error}`;
+          responseContainer.style.background = "#fdecea";
+          responseContainer.style.color = "#c0392b";
+        }
       }
     } catch (error) {
       responsePlaceholder.textContent = `Request failed: ${error.message}`;
@@ -153,14 +173,17 @@ document.addEventListener("DOMContentLoaded", function () {
       (lowerStatus.includes("generating") ||
         lowerStatus.includes("running") ||
         lowerStatus.includes("processing") ||
-        lowerStatus.includes("evaluating")) &&
-      // pastikan status tidak mengandung kata selesai atau generated
+        lowerStatus.includes("evaluating") ||
+        lowerStatus.includes("analyzing")) &&
+      // pastikan status tidak mengandung kata selesai atau generated atau user input required
       !(
         lowerStatus.includes("generated") ||
         lowerStatus.includes("finished") ||
         lowerStatus.includes("done") ||
         lowerStatus.includes("error") ||
-        lowerStatus.includes("idle")
+        lowerStatus.includes("idle") ||
+        lowerStatus.includes("user input required") ||
+        lowerStatus.includes("incomplete")
       );
     setButtonsDisabled(processing);
     setSpinnerVisible(processing, data.status || "Processing...");

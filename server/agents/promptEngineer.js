@@ -5,7 +5,8 @@ async function promptEngineer(
   description,
   extras = [],
   howToReproduce = "",
-  acceptanceCriteria = ""
+  acceptanceCriteria = "",
+  formContext = null
 ) {
   const extrasText = extras.length
     ? `Also include scenarios for: ${extras.join(", ")} if relevant.`
@@ -14,6 +15,40 @@ async function promptEngineer(
   const howToReproduceText = howToReproduce
     ? `How to Reproduce:\n${howToReproduce}\n`
     : "";
+
+  // Tambahkan form context dari analisis struktur form
+  let contextText = "";
+  if (formContext && formContext.fields) {
+    contextText += `\nForm Structure Analysis:\n`;
+
+    // Tambahkan informasi submit button jika ada
+    if (formContext.submitButton) {
+      contextText += `Submit Button: ${formContext.submitButton.selector}`;
+      if (formContext.submitButton.text) {
+        contextText += ` (text: "${formContext.submitButton.text}")`;
+      }
+      contextText += `\n`;
+    }
+
+    // Tambahkan informasi form selector jika ada
+    if (formContext.formSelector) {
+      contextText += `Form Selector: ${formContext.formSelector}\n`;
+    }
+
+    for (const [fieldId, fieldInfo] of Object.entries(formContext.fields)) {
+      contextText += `- Field: ${fieldId} (${fieldInfo.selector}, type: ${
+        fieldInfo.type
+      }${fieldInfo.required ? ", required" : ""})\n`;
+      if (fieldInfo.validation && fieldInfo.validation.length > 0) {
+        contextText += `  Validations: ${fieldInfo.validation.join(", ")}\n`;
+      }
+      if (fieldInfo.messages && Object.keys(fieldInfo.messages).length > 0) {
+        contextText += `  Error Messages: ${JSON.stringify(
+          fieldInfo.messages
+        )}\n`;
+      }
+    }
+  }
 
   const criteriaText = acceptanceCriteria
     ? `Acceptance Criteria:\n${acceptanceCriteria}\n`
@@ -24,7 +59,9 @@ async function promptEngineer(
     : "";
 
   const system = `You are a QA test planner. Given a user story, extract a maximum of 5 concise E2E test scenarios.\nUse bullet points and Given–When–Then format. Prioritize functional requirements.\n${includeNegativeCases}\n${extrasText}\n`;
-  const userPrompt = `USER STORY:\n${description}\n\n${howToReproduceText}${criteriaText}\nGenerate E2E test scenarios accordingly.`;
+  const userPrompt = `USER STORY:\n${description}\n\n${howToReproduceText}${criteriaText}${
+    contextText ? `Context Information:\n${contextText}\n` : ""
+  }Generate E2E test scenarios accordingly.`;
   const combinedPrompt = `${system}\n\n${userPrompt}`;
 
   setCurrentProgress({
