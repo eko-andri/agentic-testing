@@ -47,7 +47,7 @@ async function callOllamaLLM({
   }
   // Tidak perlu validasi model manual, biarkan Ollama yang handle
   try {
-    console.log("Calling Ollama API with model:", model);
+    console.log("Calling Ollama API with model:", model, temperature);
     const response = await axios.post(
       "http://localhost:11434/api/generate",
       {

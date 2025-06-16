@@ -1,385 +1,421 @@
-const fs = require("fs");
-const path = require("path");
-const cheerio = require("cheerio");
-const { setCurrentProgress } = require("./utils/progressStatus");
+// agents/formContextAnalyzer.js - Cleaned version without duplicate prompts
 
-async function analyzeFormContext(testUrl) {
-  try {
-    setCurrentProgress({
-      status: "Form Context Analyzer:\nParsing HTML structure...",
-      prompt: `Analyzing form at: ${testUrl}`,
+const fs = require("fs");
+const callOllamaLLM = require("../utils/llmOllama");
+const { ConfigHelper, DEFAULT_OPTIONS } = require("./config/prompts");
+
+class FormContextAnalyzer {
+  constructor(options = {}) {
+    this.options = {
+      ...DEFAULT_OPTIONS,
+      ...options,
+      // FORCE self-reflection to always be enabled - remove user control
+      enableSelfReflection: true,
+    };
+    this.progressCallback = options.progressCallback || (() => {});
+  }
+
+  async analyze(htmlPath, description = "", acceptanceCriteria = "") {
+    try {
+      this.progressCallback(
+        "🔍 Form Analyzer\nInitializing comprehensive analysis...",
+        {
+          analyzing: htmlPath,
+          description: description.substring(0, 100),
+          criteria: acceptanceCriteria.substring(0, 100),
+        }
+      );
+
+      // Step 1: Extract form structure
+      const formStructure = await this._extractFormStructure(htmlPath);
+
+      // Step 2: Generate intelligent test analysis
+      const intelligentResult = await this._generateIntelligentAnalysis(
+        formStructure,
+        description,
+        acceptanceCriteria
+      );
+
+      // Step 3: MANDATORY Self-reflection optimization
+      const optimizedResult = await this._performMandatorySelfReflection(
+        intelligentResult,
+        formStructure,
+        description,
+        acceptanceCriteria
+      );
+
+      this.progressCallback(
+        "✅ Form Analyzer\nComprehensive analysis completed with quality assurance",
+        {
+          preview: `Analyzed and validated ${
+            Object.keys(optimizedResult.fields || {}).length
+          } fields with ${
+            (optimizedResult.recommendedTestScenarios || []).length
+          } quality-assured scenarios`,
+        }
+      );
+
+      return optimizedResult;
+    } catch (error) {
+      this.progressCallback("❌ Form Analyzer\nAnalysis failed", {
+        error: error.message,
+      });
+      console.error("Form analysis failed:", error);
+      throw new Error(`Form analysis failed: ${error.message}`);
+    }
+  }
+
+  // Enhanced FormContextAnalyzer with better debugging and validation
+
+  async _extractFormStructure(htmlPath) {
+    this.progressCallback("🔍 Form Analyzer\nExtracting form structure...", {
+      status: "Reading HTML file and identifying form elements...",
     });
 
-    const filename = path.basename(new URL(testUrl).pathname); // e.g. policy-form.html
-    const htmlPath = path.join(__dirname, "..", "..", filename); // Go up to root directory
+    const htmlContent = fs.readFileSync(htmlPath, "utf8");
 
-    if (!fs.existsSync(htmlPath)) {
-      throw new Error(`HTML file not found: ${htmlPath}`);
+    // DEBUG: Log HTML analysis
+    console.log("📝 HTML Analysis:");
+    console.log("- HTML length:", htmlContent.length);
+    console.log("- Contains form tag:", htmlContent.includes("<form"));
+    console.log(
+      "- Contains input tags:",
+      (htmlContent.match(/<input/g) || []).length
+    );
+    console.log("- Contains script tag:", htmlContent.includes("<script"));
+    console.log(
+      "- Contains getElementById:",
+      htmlContent.includes("getElementById")
+    );
+
+    if (!ConfigHelper.hasAgent("FORM_STRUCTURE_ANALYZER")) {
+      throw new Error(
+        "FORM_STRUCTURE_ANALYZER agent not found in configuration"
+      );
     }
 
-    const html = fs.readFileSync(htmlPath, "utf-8");
+    const prompt = ConfigHelper.buildPrompt(
+      "FORM_STRUCTURE_ANALYZER",
+      htmlContent
+    );
 
-    const $ = cheerio.load(html);
-    const context = {
-      formUrl: testUrl,
-      fields: {},
-      submitButton: null,
-      formSelector: null,
-    };
+    // DEBUG: Log prompt being sent
+    console.log(
+      "📤 Prompt sent to LLM (first 500 chars):",
+      prompt.substring(0, 500)
+    );
 
-    // Extract form information
-    const form = $("form").first();
-    if (form.length > 0) {
-      const formId = form.attr("id");
-      context.formSelector = formId ? `#${formId}` : "form";
-    }
+    try {
+      const result = await callOllamaLLM({
+        prompt,
+        system: ConfigHelper.getSystemPrompt("FORM_STRUCTURE_ANALYZER"),
+        temperature: ConfigHelper.getTemperature("FORM_STRUCTURE_ANALYZER"),
+      });
 
-    // Extract submit button information
-    const submitBtn = $('button[type="submit"], input[type="submit"]').first();
-    if (submitBtn.length > 0) {
-      const btnId = submitBtn.attr("id");
-      const btnType = submitBtn.attr("type");
-      const btnText = submitBtn.text() || submitBtn.attr("value");
+      // DEBUG: Log raw response
+      console.log(
+        "📥 Raw LLM response (first 500 chars):",
+        result.substring(0, 500)
+      );
+      console.log(
+        "📥 Raw LLM response (last 200 chars):",
+        result.substring(Math.max(0, result.length - 200))
+      );
 
-      context.submitButton = {
-        selector: btnId ? `#${btnId}` : `button[type="${btnType}"]`,
-        type: btnType,
-        text: btnText,
-      };
-    }
+      const parsedResult = this._parseAndValidateJSON(result, "form structure");
 
-    // Extract input/select/textarea
-    $("input, select, textarea").each((_, el) => {
-      const id = $(el).attr("id");
-      const name = $(el).attr("name");
-      const type = $(el).attr("type") || "text";
-      const required = $(el).attr("required") !== undefined;
-      const placeholder = $(el).attr("placeholder");
-      const label = $(`label[for="${id}"]`).text().trim();
+      // DEBUG: Log parsed structure
+      console.log("✅ Parsed structure validation:");
+      console.log("- Form fields count:", parsedResult.formFields?.length || 0);
+      console.log(
+        "- Has clientSideValidation:",
+        !!parsedResult.clientSideValidation
+      );
+      console.log(
+        "- Error messages found:",
+        Object.keys(parsedResult.clientSideValidation?.errorMessages || {})
+      );
 
-      if (id) {
-        context.fields[id] = {
-          selector: `#${id}`,
-          type,
-          required,
-          placeholder,
-          label: label || name || id,
-          validation: [], // akan diisi berdasarkan analisis script
-          messages: {},
-          testingStrategies: [], // strategi khusus untuk testing field ini
-        };
-
-        // Tambahkan strategi testing khusus berdasarkan tipe field
-        if (type === "date") {
-          context.fields[id].testingStrategies.push({
-            scenario: "valid_input",
-            method: "fill",
-            value: "YYYY-MM-DD",
-            description:
-              "Fill with a valid date in YYYY-MM-DD format that meets requirements",
-            codeTemplate: `// Calculate valid date for age requirement
-const today = new Date();
-const validDate = new Date(today.getFullYear() - 20, today.getMonth(), today.getDate());
-await page.locator("${
-              id ? `#${id}` : `[name="${name}"]`
-            }").fill(validDate.toISOString().split("T")[0]);`,
-          });
-          context.fields[id].testingStrategies.push({
-            scenario: "invalid_input",
-            method: "javascript_override",
-            value: "invalid-date-string",
-            description:
-              "Override value property to simulate invalid date input",
-            codeTemplate: `// Test invalid date input
-const ${id}Field = page.locator("${id ? `#${id}` : `[name="${name}"]`}");
-await ${id}Field.fill("2020-01-01"); 
-await page.evaluate(() => {
-  const input = document.getElementById("${id}");
-  Object.defineProperty(input, 'value', {
-    get: function() { return 'invalid-date-string'; },
-    configurable: true
-  });
-});`,
-          });
-          context.fields[id].testingStrategies.push({
-            scenario: "empty_input",
-            method: "clear",
-            value: "",
-            description: "Leave field empty to test required validation",
-            codeTemplate: `// Test empty date field
-await page.locator("${id ? `#${id}` : `[name="${name}"]`}").clear();`,
-          });
-          context.fields[id].testingStrategies.push({
-            scenario: "underage_input",
-            method: "calculated_date",
-            value: "calculated_underage_date",
-            description: "Fill with date that makes user underage",
-            codeTemplate: `// Calculate underage date (less than required age)
-const today = new Date();
-const underageDate = new Date(today.getFullYear() - 15, today.getMonth(), today.getDate());
-await page.locator("${
-              id ? `#${id}` : `[name="${name}"]`
-            }").fill(underageDate.toISOString().split("T")[0]);`,
-          });
-        } else if (type === "email") {
-          context.fields[id].testingStrategies.push({
-            scenario: "valid_input",
-            method: "fill",
-            value: "test@example.com",
-            description: "Fill with valid email format",
-          });
-          context.fields[id].testingStrategies.push({
-            scenario: "invalid_input",
-            method: "fill",
-            value: "invalid-email",
-            description: "Fill with invalid email format",
-          });
-        } else {
-          context.fields[id].testingStrategies.push({
-            scenario: "valid_input",
-            method: "fill",
-            value: "valid_test_value",
-            description: "Fill with valid test value",
-          });
-          if (required) {
-            context.fields[id].testingStrategies.push({
-              scenario: "empty_input",
-              method: "clear",
-              value: "",
-              description: "Leave required field empty",
-            });
+      // VALIDATION: Check if selectors look realistic
+      if (parsedResult.formFields) {
+        parsedResult.formFields.forEach((field, index) => {
+          console.log(
+            `- Field ${index + 1}: name="${field.name}", selector="${
+              field.selector
+            }"`
+          );
+          if (field.validationLogic?.errorDisplayElement) {
+            console.log(
+              `  Error element: ${field.validationLogic.errorDisplayElement}`
+            );
           }
+        });
+      }
+
+      this.progressCallback("✅ Form Analyzer\nForm structure extracted", {
+        preview: `Found ${
+          parsedResult.formFields?.length || 0
+        } form fields with validation logic`,
+      });
+
+      return parsedResult;
+    } catch (error) {
+      console.error("❌ Form structure extraction failed:", error);
+      throw new Error(`Form structure extraction failed: ${error.message}`);
+    }
+  }
+
+  async _generateIntelligentAnalysis(
+    formStructure,
+    description,
+    acceptanceCriteria
+  ) {
+    this.progressCallback(
+      "🧠 Form Analyzer\nGenerating intelligent test scenarios...",
+      {
+        status:
+          "Creating comprehensive test strategies based on form structure and business requirements...",
+      }
+    );
+
+    if (!ConfigHelper.hasAgent("INTELLIGENT_TEST_GENERATOR")) {
+      throw new Error(
+        "INTELLIGENT_TEST_GENERATOR agent not found in configuration"
+      );
+    }
+
+    const prompt = ConfigHelper.buildPrompt(
+      "INTELLIGENT_TEST_GENERATOR",
+      formStructure,
+      description,
+      acceptanceCriteria
+    );
+
+    try {
+      const result = await callOllamaLLM({
+        prompt,
+        system: ConfigHelper.getSystemPrompt("INTELLIGENT_TEST_GENERATOR"),
+        temperature: ConfigHelper.getTemperature("INTELLIGENT_TEST_GENERATOR"),
+      });
+
+      const parsedResult = this._parseAndValidateJSON(
+        result,
+        "intelligent analysis"
+      );
+
+      this.progressCallback(
+        "✅ Form Analyzer\nInitial test scenarios generated",
+        {
+          preview: `Generated ${
+            Object.keys(parsedResult.fields || {}).length
+          } field strategies - proceeding to quality validation...`,
+        }
+      );
+
+      return parsedResult;
+    } catch (error) {
+      throw new Error(`Intelligent analysis failed: ${error.message}`);
+    }
+  }
+
+  async _performMandatorySelfReflection(
+    intelligentResult,
+    originalFormStructure,
+    description,
+    acceptanceCriteria
+  ) {
+    this.progressCallback(
+      "🔄 Form Analyzer\nPerforming MANDATORY quality assurance...",
+      {
+        status:
+          "Validating test accuracy against form behavior and acceptance criteria...",
+      }
+    );
+
+    if (!ConfigHelper.hasAgent("TEST_QUALITY_AUDITOR")) {
+      throw new Error(
+        "CRITICAL: TEST_QUALITY_AUDITOR agent not found. Quality assurance is mandatory and cannot be skipped."
+      );
+    }
+
+    // FIXED: Use the enhanced buildPrompt from config instead of custom method
+    const prompt = ConfigHelper.buildPrompt(
+      "TEST_QUALITY_AUDITOR",
+      intelligentResult,
+      originalFormStructure,
+      description,
+      acceptanceCriteria
+    );
+
+    try {
+      const optimizedResult = await callOllamaLLM({
+        prompt,
+        // FIXED: Use system prompt from config, not custom method
+        system: ConfigHelper.getSystemPrompt("TEST_QUALITY_AUDITOR"),
+        temperature: ConfigHelper.getTemperature("TEST_QUALITY_AUDITOR"),
+      });
+
+      const parsedResult = this._parseAndValidateJSON(
+        optimizedResult,
+        "quality-assured analysis"
+      );
+
+      // VALIDATION: Ensure the result has improved or maintained quality
+      this._validateQualityImprovements(intelligentResult, parsedResult);
+
+      this.progressCallback(
+        "✅ Form Analyzer\nQuality assurance completed - test accuracy verified",
+        {
+          preview: `Validated ${
+            Object.keys(parsedResult.fields || {}).length
+          } fields with ${
+            (parsedResult.recommendedTestScenarios || []).length
+          } quality-assured scenarios`,
+        }
+      );
+
+      return parsedResult;
+    } catch (error) {
+      throw new Error(
+        `CRITICAL: Quality assurance failed - test accuracy cannot be guaranteed: ${error.message}`
+      );
+    }
+  }
+
+  _validateQualityImprovements(original, optimized) {
+    if (!optimized.fields || Object.keys(optimized.fields).length === 0) {
+      throw new Error(
+        "Quality assurance failed: No fields in optimized result"
+      );
+    }
+
+    if (
+      !optimized.recommendedTestScenarios ||
+      optimized.recommendedTestScenarios.length === 0
+    ) {
+      throw new Error(
+        "Quality assurance failed: No test scenarios in optimized result"
+      );
+    }
+
+    console.log("Quality assurance completed:", {
+      originalFields: Object.keys(original.fields || {}).length,
+      optimizedFields: Object.keys(optimized.fields || {}).length,
+      originalScenarios: (original.recommendedTestScenarios || []).length,
+      optimizedScenarios: (optimized.recommendedTestScenarios || []).length,
+    });
+  }
+
+  // Improved JSON parser for FormContextAnalyzer
+
+  _parseAndValidateJSON(jsonString, context) {
+    try {
+      // Step 1: Remove markdown blocks
+      let cleaned = jsonString
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+
+      // Step 2: Remove ALL comments more aggressively
+      cleaned = cleaned
+        .replace(/\/\/.*$/gm, "") // Remove // comments
+        .replace(/\/\*[\s\S]*?\*\//g, "") // Remove /* */ comments
+        .replace(/,(\s*[}\]])/g, "$1") // Remove trailing commas
+        .replace(/\n\s*\n/g, "\n") // Remove double newlines
+        .trim();
+
+      // Step 3: Parse JSON
+      const parsed = JSON.parse(cleaned);
+
+      // Step 4: Enhanced validation
+      if (!parsed || typeof parsed !== "object") {
+        throw new Error(`Invalid JSON structure for ${context}`);
+      }
+
+      // Step 5: Validate required structure for form analysis
+      if (context === "form structure") {
+        if (!parsed.formFields || !Array.isArray(parsed.formFields)) {
+          throw new Error("Missing or invalid formFields array");
+        }
+        if (!parsed.clientSideValidation) {
+          throw new Error("Missing clientSideValidation object");
         }
       }
-    });
 
-    // Extract error/success messages dari inline script dan analisis validation logic
-    const scripts = $("script")
-      .map((_, el) => $(el).html())
-      .get()
-      .join("\n");
+      console.log(
+        `✅ Successfully parsed ${context} JSON with ${
+          Object.keys(parsed).length
+        } top-level properties`
+      );
+      return parsed;
+    } catch (error) {
+      console.error(`❌ JSON parsing failed for ${context}:`, error.message);
+      console.error(
+        "Raw response (first 1000 chars):",
+        jsonString.substring(0, 1000)
+      );
+      console.error(
+        "Raw response (last 500 chars):",
+        jsonString.substring(Math.max(0, jsonString.length - 500))
+      );
 
-    // Mapping pesan error yang lebih komprehensif
-    const regexMap = [
-      {
-        key: "empty",
-        pattern: /"([^"]*(?:empty|required|cannot be empty)[^"]*)"/gi,
-      },
-      {
-        key: "invalid",
-        pattern: /"([^"]*(?:invalid|only dates|must accept only)[^"]*)"/gi,
-      },
-      {
-        key: "minAge",
-        pattern: /"([^"]*(?:Minimum age|age requirement)[^"]*)"/gi,
-      },
-      { key: "success", pattern: /"([^"]*(?:successfully|success)[^"]*)"/gi },
-      { key: "format", pattern: /"([^"]*(?:format|pattern)[^"]*)"/gi },
+      // Try to identify specific issues
+      if (jsonString.includes("//")) {
+        console.error(
+          "⚠️  Response contains // comments - these break JSON parsing"
+        );
+      }
+      if (jsonString.includes("```")) {
+        console.error("⚠️  Response contains markdown blocks");
+      }
+
+      throw new Error(`Failed to parse ${context} JSON: ${error.message}`);
+    }
+  }
+
+  // Utility methods
+  static getAvailableAgents() {
+    return ConfigHelper.getAgentsByCategory("analysis");
+  }
+
+  static hasMandatoryQualityAssurance() {
+    return ConfigHelper.hasAgent("TEST_QUALITY_AUDITOR");
+  }
+
+  static debugConfiguration() {
+    console.log("=== FormContextAnalyzer Debug Info ===");
+    console.log("Available agents:", ConfigHelper.debugAgentConfig());
+    console.log(
+      "Quality assurance available:",
+      ConfigHelper.hasAgent("TEST_QUALITY_AUDITOR")
+    );
+    console.log(
+      "IMPORTANT: All prompts managed by ConfigHelper - no custom prompts"
+    );
+
+    const requiredAgents = [
+      "FORM_STRUCTURE_ANALYZER",
+      "INTELLIGENT_TEST_GENERATOR",
+      "TEST_QUALITY_AUDITOR",
     ];
 
-    // Analisis validation rules berdasarkan JavaScript logic
-    for (const field in context.fields) {
-      const fieldInfo = context.fields[field];
-
-      // Extract messages untuk field ini
-      for (const { key, pattern } of regexMap) {
-        let match;
-        while ((match = pattern.exec(scripts)) !== null) {
-          if (!fieldInfo.messages[key]) {
-            fieldInfo.messages[key] = match[1];
-          }
-        }
-      }
-
-      // Analisis validation logic berdasarkan script content
-      if (scripts.includes(`!document.getElementById("${field}").value`)) {
-        fieldInfo.validation.push("nonEmpty");
-      }
-      if (scripts.includes(`new Date(`) && scripts.includes(field)) {
-        fieldInfo.validation.push("validDate");
-      }
-      if (scripts.includes("age <") || scripts.includes("age>=")) {
-        const ageMatch = scripts.match(/age\s*[<>=]+\s*(\d+)/);
-        if (ageMatch) {
-          fieldInfo.validation.push(`minAge:${ageMatch[1]}`);
-          // Update testing strategy untuk age validation
-          if (fieldInfo.type === "date") {
-            fieldInfo.testingStrategies.push({
-              scenario: "underage_input",
-              method: "calculated_date",
-              value: `calculated_underage_date`,
-              description: `Fill with date that makes age less than ${ageMatch[1]} years`,
-              ageRequirement: parseInt(ageMatch[1]),
-              codeTemplate: `// Calculate underage date (less than ${
-                ageMatch[1]
-              } years)
-const today = new Date();
-const underageDate = new Date(today.getFullYear() - ${
-                parseInt(ageMatch[1]) - 1
-              }, today.getMonth(), today.getDate());
-await page.locator("${
-                fieldInfo.selector
-              }").fill(underageDate.toISOString().split("T")[0]);`,
-            });
-          }
-        }
-      }
-      if (scripts.includes("isNaN")) {
-        fieldInfo.validation.push("validFormat");
-      }
-    }
-
-    setCurrentProgress({
-      status: "Form Context Analyzer:\nForm structure analysis complete.",
-      prompt: `Found ${
-        Object.keys(context.fields).length
-      } form fields with validations and messages.`,
+    requiredAgents.forEach((agentName) => {
+      const available = ConfigHelper.hasAgent(agentName);
+      const hasPrompt = available
+        ? typeof ConfigHelper.getAgent(agentName).buildPrompt === "function"
+        : false;
+      const hasSystemPrompt = available
+        ? !!ConfigHelper.getSystemPrompt(agentName)
+        : false;
+      const status =
+        agentName === "TEST_QUALITY_AUDITOR" ? "MANDATORY" : "REQUIRED";
+      console.log(
+        `  - ${agentName}: available=${available}, hasBuildPrompt=${hasPrompt}, hasSystemPrompt=${hasSystemPrompt} [${status}]`
+      );
     });
-
-    // Generate recommended test scenarios berdasarkan analisis form
-    context.recommendedTestScenarios = generateTestScenarios(context);
-
-    return context;
-  } catch (error) {
-    setCurrentProgress({
-      status: "Form Context Analyzer:\nError analyzing form structure.",
-      prompt: `Error: ${error.message}`,
-    });
-    throw error;
   }
 }
 
-function generateTestScenarios(context) {
-  const scenarios = [];
-
-  // Scenario 1: Valid form submission
-  scenarios.push({
-    name: "Valid Form Submission",
-    description: "Submit form with all valid inputs",
-    expectedResult: "success",
-    expectedMessage:
-      Object.values(context.fields)[0]?.messages?.success ||
-      "Form submitted successfully",
-    assertionType: "success_message", // Tambahkan tipe assertion yang jelas
-    steps: Object.entries(context.fields).map(([fieldId, fieldInfo]) => {
-      const validStrategy = fieldInfo.testingStrategies.find(
-        (s) => s.scenario === "valid_input"
-      );
-      return {
-        action: validStrategy?.method || "fill",
-        selector: fieldInfo.selector,
-        value: validStrategy?.value || "test_value",
-        fieldType: fieldInfo.type,
-        code:
-          validStrategy?.codeTemplate ||
-          `await page.locator("${fieldInfo.selector}").fill("${
-            validStrategy?.value || "test_value"
-          }");`,
-      };
-    }),
-    assertionCode: `// For success scenario, expect success message
-const message = await getErrorMessage(page);
-expect(message).toContain("Form submitted successfully.");`,
-  });
-
-  // Scenario untuk setiap field: empty validation
-  Object.entries(context.fields).forEach(([fieldId, fieldInfo]) => {
-    if (fieldInfo.required) {
-      scenarios.push({
-        name: `Empty ${fieldInfo.label || fieldId} Field`,
-        description: `Submit form with empty ${
-          fieldInfo.label || fieldId
-        } field`,
-        expectedResult: "error",
-        expectedMessage:
-          fieldInfo.messages.empty ||
-          `${fieldInfo.label || fieldId} field is required`,
-        assertionType: "error_message",
-        focusField: fieldId,
-        steps: [
-          {
-            action: "skip_field",
-            selector: fieldInfo.selector,
-            fieldType: fieldInfo.type,
-          },
-        ],
-        assertionCode: `const errorMessage = await getErrorMessage(page);
-expect(errorMessage).toBe("${
-          fieldInfo.messages.empty ||
-          `${fieldInfo.label || fieldId} field is required`
-        }");`,
-      });
-    }
-
-    // Scenario untuk invalid input berdasarkan tipe field
-    const invalidStrategy = fieldInfo.testingStrategies.find(
-      (s) => s.scenario === "invalid_input"
-    );
-    if (invalidStrategy) {
-      scenarios.push({
-        name: `Invalid ${fieldInfo.label || fieldId} Input`,
-        description: `Submit form with invalid ${
-          fieldInfo.label || fieldId
-        } input`,
-        expectedResult: "error",
-        expectedMessage:
-          fieldInfo.messages.invalid ||
-          `Invalid ${fieldInfo.label || fieldId} format`,
-        assertionType: "error_message",
-        focusField: fieldId,
-        steps: [
-          {
-            action: invalidStrategy.method,
-            selector: fieldInfo.selector,
-            value: invalidStrategy.value,
-            fieldType: fieldInfo.type,
-            code:
-              invalidStrategy.codeTemplate ||
-              `await page.locator("${fieldInfo.selector}").fill("${invalidStrategy.value}");`,
-          },
-        ],
-        assertionCode: `const errorMessage = await getErrorMessage(page);
-expect(errorMessage).toBe("${
-          fieldInfo.messages.invalid ||
-          `Invalid ${fieldInfo.label || fieldId} format`
-        }");`,
-      });
-    }
-
-    // Scenario khusus untuk age validation
-    const ageStrategy = fieldInfo.testingStrategies.find(
-      (s) => s.scenario === "underage_input"
-    );
-    if (ageStrategy) {
-      scenarios.push({
-        name: `Underage ${fieldInfo.label || fieldId} Input`,
-        description: `Submit form with ${
-          fieldInfo.label || fieldId
-        } that makes user underage`,
-        expectedResult: "error",
-        expectedMessage: fieldInfo.messages.minAge || "Age requirement not met",
-        assertionType: "error_message",
-        focusField: fieldId,
-        ageRequirement: ageStrategy.ageRequirement,
-        steps: [
-          {
-            action: ageStrategy.method,
-            selector: fieldInfo.selector,
-            value: ageStrategy.value,
-            fieldType: fieldInfo.type,
-            ageRequirement: ageStrategy.ageRequirement,
-            code: ageStrategy.codeTemplate,
-          },
-        ],
-        assertionCode: `const errorMessage = await getErrorMessage(page);
-expect(errorMessage).toBe("${
-          fieldInfo.messages.minAge || "Age requirement not met"
-        }");`,
-      });
-    }
-  });
-
-  return scenarios;
-}
-
-module.exports = { analyzeFormContext };
+module.exports = {
+  FormContextAnalyzer,
+};
