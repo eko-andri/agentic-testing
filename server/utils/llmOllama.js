@@ -2,10 +2,19 @@
 const axios = require("axios");
 
 const AI = {
+  deepseek: {
+    large: "deepseek-r1:8b",
+    larger: "deepseek-r1:32b",
+  },
+  qwen3: {
+    large: "qwen3:8b",
+    larger: "qwen3:30b",
+  },
   qwen2_5: {
     latest: "qwen2.5:latest",
     small: "qwen2.5:1b",
     medium: "qwen2.5:3b",
+    large: "qwen2.5:7b",
     large: "qwen2.5:7b",
   },
   qwen2_5coder: {
@@ -13,14 +22,15 @@ const AI = {
     small: "qwen2.5-coder:1b",
     medium: "qwen2.5-coder:3b",
     large: "qwen2.5-coder:7b",
+    larger: "qwen2.5-coder:14b",
   },
 };
 
 async function callOllamaLLM({
   prompt,
-  model = AI.qwen2_5.latest,
+  model = AI.qwen2_5coder.large,
   system = "",
-  temperature = 0.2,
+  temperature = 0.6,
 }) {
   // Validasi sederhana (opsional, hanya untuk keamanan input)
   if (!prompt || typeof prompt !== "string" || prompt.trim() === "") {

@@ -15,47 +15,65 @@
         padding: 2rem 1.5rem;
         border-radius: 12px;
         box-shadow: 0 4px 24px rgba(44, 62, 80, 0.08);
-      ">
+      "
+    >
       <h2>Policy Form (Test DOB)</h2>
       <form id="policy-form" novalidate>
         <div class="field-group">
           <label for="dob">Date of Birth (DOB):</label>
           <input type="date" id="dob" name="dob" required />
+          <div
+            id="dob-error"
+            class="error-message"
+            style="margin-top: 0.25rem; color: #e53935"
+          ></div>
         </div>
         <button type="submit">Submit</button>
         <div id="form-message" style="margin-top: 1rem"></div>
       </form>
     </main>
     <script>
+      // --- Real-time validation for DOB field ---
+      const dobInput = document.getElementById("dob");
+      const dobError = document.getElementById("dob-error");
+      dobInput.addEventListener("input", validateDOB);
+      dobInput.addEventListener("change", validateDOB);
+
+      function validateDOB() {
+        const dob = dobInput.value;
+        dobError.textContent = "";
+        dobError.className = "error-message";
+        if (!dob) {
+          dobError.textContent = "DOB field is required and cannot be empty.";
+          return;
+        }
+        const dobDate = new Date(dob);
+        const now = new Date();
+        let age = now.getFullYear() - dobDate.getFullYear();
+        const m = now.getMonth() - dobDate.getMonth();
+        if (m < 0 || (m === 0 && now.getDate() < dobDate.getDate())) {
+          age--;
+        }
+        if (isNaN(dobDate.getTime())) {
+          dobError.textContent = "DOB field must accept only dates.";
+          return;
+        }
+        if (age < 16) {
+          dobError.textContent = "Minimum age requirement not met.";
+          return;
+        }
+        // If valid, clear error
+        dobError.textContent = "";
+      }
+
       document
         .getElementById("policy-form")
         .addEventListener("submit", function (e) {
           e.preventDefault();
+          validateDOB();
+          if (dobError.textContent) return;
           const dob = document.getElementById("dob").value;
           const msg = document.getElementById("form-message");
-          if (!dob) {
-            msg.textContent = "DOB field is required and cannot be empty.";
-            msg.className = "error-message";
-            return;
-          }
-          const dobDate = new Date(dob);
-          const now = new Date();
-          let age = now.getFullYear() - dobDate.getFullYear();
-          const m = now.getMonth() - dobDate.getMonth();
-          if (m < 0 || (m === 0 && now.getDate() < dobDate.getDate())) {
-            age--;
-          }
-
-          if (isNaN(dobDate.getTime())) {
-            msg.textContent = "DOB field must accept only dates.";
-            msg.className = "error-message";
-            return;
-          }
-          if (age < 16) {
-            msg.textContent = "Minimum age requirement not met.";
-            msg.className = "error-message";
-            return;
-          }
           msg.textContent = "Form submitted successfully.";
           msg.className = "success-message";
         });

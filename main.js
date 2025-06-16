@@ -27,6 +27,8 @@ document
     const responsePlaceholder = document.getElementById("response-placeholder");
     responsePlaceholder.textContent = "Processing...";
     responseContainer.style.display = "block";
+    console.log("Submitting form data:", formData);
+
     try {
       const response = await fetch("http://localhost:3333/api/run-e2e", {
         method: "POST",
