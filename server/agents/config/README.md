@@ -1,8 +1,8 @@
 # Agent Configuration Management
 
-Proyek ini telah direfactor untuk memisahkan konfigurasi setiap agent ke dalam file terpisah untuk meningkatkan maintainability dan organisasi kode.
+This project has been refactored to separate each agent's configuration into individual files to improve maintainability and code organization.
 
-## Struktur Folder
+## Folder Structure
 
 ```
 server/agents/config/
@@ -17,9 +17,9 @@ server/agents/config/
     └── test-code-generator.js
 ```
 
-## Cara Penggunaan
+## How to Use
 
-### Import Semua Konfigurasi
+### Import All Configurations
 
 ```javascript
 const {
@@ -30,62 +30,62 @@ const {
 } = require("./server/agents/config/prompts");
 ```
 
-### Import Agent Spesifik
+### Import a Specific Agent
 
 ```javascript
 const FORM_STRUCTURE_ANALYZER = require("./server/agents/config/agents/form-structure-analyzer");
-const TEST_QUALITY_AUDITOR = require("./server/agents/config/agents/test-quality-auditor");
+const FORM_QUALITY_AUDITOR = require("./server/agents/config/agents/test-quality-auditor");
 ```
 
-### Menggunakan ConfigHelper
+### Using ConfigHelper
 
 ```javascript
-// Mendapatkan agent berdasarkan nama
+// Get agent by name
 const agent = ConfigHelper.getAgent("FORM_STRUCTURE_ANALYZER");
 
-// Membangun prompt untuk agent
+// Build a prompt for an agent
 const prompt = ConfigHelper.buildPrompt(
   "INTELLIGENT_TEST_GENERATOR",
   formStructure,
   description
 );
 
-// Mendapatkan template framework
+// Get a framework template
 const template = ConfigHelper.getFrameworkTemplate("playwright");
 
-// Debug agent yang tersedia
+// Debug available agents
 ConfigHelper.debugAgentConfig();
 ```
 
-## Manfaat Refactoring
+## Benefits of Refactoring
 
 ### ✅ **Maintainability**
 
-- Setiap agent memiliki file konfigurasi terpisah
-- Mudah untuk memodifikasi konfigurasi satu agent tanpa mempengaruhi yang lain
-- Kode lebih terorganisir dan mudah dibaca
+- Each agent has its own configuration file
+- Easy to modify one agent's configuration without affecting others
+- Code is more organized and easier to read
 
 ### ✅ **Scalability**
 
-- Mudah menambah agent baru dengan membuat file terpisah
-- Struktur yang konsisten untuk semua agent
-- Import/export yang bersih
+- Easy to add new agents by creating separate files
+- Consistent structure for all agents
+- Clean import/export
 
 ### ✅ **Debugging**
 
-- Lebih mudah melacak masalah pada agent tertentu
-- Konfigurasi agent terisolasi satu sama lain
-- Helper method untuk debugging tersedia
+- Easier to track issues in specific agents
+- Agent configurations are isolated from each other
+- Helper methods for debugging are available
 
 ### ✅ **Collaboration**
 
-- Developer bisa bekerja pada agent yang berbeda tanpa konflik
-- Code review lebih fokus per agent
-- Git history lebih bersih
+- Developers can work on different agents without conflicts
+- Code reviews can focus on individual agents
+- Git history is cleaner
 
-## Menambah Agent Baru
+## Adding a New Agent
 
-1. **Buat file agent baru**:
+1. **Create a new agent file:**
 
 ```javascript
 // agents/new-agent.js
@@ -104,7 +104,7 @@ const NEW_AGENT = {
 module.exports = NEW_AGENT;
 ```
 
-2. **Update index.js**:
+2. **Update index.js:**
 
 ```javascript
 const NEW_AGENT = require("./agents/new-agent");
@@ -122,7 +122,7 @@ module.exports = {
 
 ## Framework Template
 
-Untuk menambah framework testing baru, edit `framework-templates.js`:
+To add a new testing framework, edit `framework-templates.js`:
 
 ```javascript
 const FRAMEWORK_TEMPLATES = {
@@ -137,43 +137,43 @@ const FRAMEWORK_TEMPLATES = {
 
 ## Best Practices
 
-1. **Naming Convention**: Gunakan kebab-case untuk nama file (contoh: `test-quality-auditor.js`)
-2. **Agent Names**: Gunakan UPPER_SNAKE_CASE untuk nama agent (contoh: `TEST_QUALITY_AUDITOR`)
-3. **Documentation**: Tambahkan komentar pada setiap agent untuk menjelaskan fungsinya
-4. **Testing**: Test setiap agent secara terpisah setelah modifikasi
-5. **Version Control**: Commit perubahan per agent untuk history yang bersih
+1. **Naming Convention**: Use kebab-case for file names (e.g., `test-quality-auditor.js`)
+2. **Agent Names**: Use UPPER_SNAKE_CASE for agent names (e.g., `FORM_QUALITY_AUDITOR`)
+3. **Documentation**: Add comments to each agent to explain its function
+4. **Testing**: Test each agent separately after making modifications
+5. **Version Control**: Commit changes per agent for a clean history
 
-## Migrasi dari Versi Lama
+## Migration from Older Versions
 
-Jika Anda menggunakan versi lama yang masih menggunakan konfigurasi dalam satu file:
+If you are using an older version that still uses a single configuration file:
 
-1. Import tetap sama dari `prompts.js`
-2. Semua fungsi ConfigHelper masih tersedia
-3. Tidak ada breaking changes untuk kode yang sudah ada
-4. Struktur AGENTS_CONFIG tetap sama
+1. Import remains the same from `prompts.js`
+2. All ConfigHelper functions are still available
+3. No breaking changes for existing code
+4. The AGENTS_CONFIG structure remains the same
 
 ## Troubleshooting
 
 ### Error: Cannot find module
 
-- Pastikan path import benar
-- Periksa apakah file agent sudah di-export dengan benar
+- Make sure the import path is correct
+- Check if the agent file has been exported correctly
 
 ### Error: Agent not found
 
-- Gunakan `ConfigHelper.debugAgentConfig()` untuk melihat agent yang tersedia
-- Periksa nama agent (case-sensitive)
+- Use `ConfigHelper.debugAgentConfig()` to see available agents
+- Check the agent name (case-sensitive)
 
 ### Error: buildPrompt function not found
 
-- Pastikan agent memiliki method `buildPrompt`
-- Periksa parameter yang dipassed ke `buildPrompt`
+- Make sure the agent has a `buildPrompt` method
+- Check the parameters passed to `buildPrompt`
 
-## Kontribusi
+## Contribution
 
-Ketika menambah atau memodifikasi agent:
+When adding or modifying an agent:
 
-1. Ikuti struktur dan convention yang ada
-2. Update dokumentasi jika diperlukan
-3. Test konfigurasi setelah perubahan
-4. Commit dengan pesan yang descriptive
+1. Follow the existing structure and conventions
+2. Update documentation if needed
+3. Test the configuration after changes
+4. Commit with a descriptive message

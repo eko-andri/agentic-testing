@@ -51,6 +51,9 @@ class ConfigHelper {
 
   // PERBAIKAN: Method untuk mengecek agent availability
   static hasAgent(agentName) {
+    console.error(`AGENTS_CONFIG`, AGENTS_CONFIG);
+    debugger;
+
     return AGENTS_CONFIG.some((agent) => agent.name === agentName);
   }
 

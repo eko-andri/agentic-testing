@@ -1,29 +1,31 @@
-// Clean Form Structure Analyzer Agent Configuration
+// agents/config/agents/form-structure-analyzer.js
 const FORM_STRUCTURE_ANALYZER = {
   name: "FORM_STRUCTURE_ANALYZER",
-  role: "form structure analyzer",
-  task: "Extract form fields and their properties from HTML",
-  systemPrompt: `Extract form structure and validation logic from HTML.
+  role: "form structure analysis",
+  task: "Extract form structure and validation logic from HTML",
+  systemPrompt: `You are an expert form analyzer that extracts comprehensive information from HTML.
 
-Extract:
-- All form elements with selectors (prefer #id > [name] > [type])
-- JavaScript validation logic and exact error messages
-- Event listeners and validation triggers
-- Success/error display elements
+ANALYZE HTML FOR:
+1. Form elements, IDs, selectors
+2. Input field types, names, IDs  
+3. Error display elements
+4. Submit buttons and form behavior
+5. JavaScript validation patterns
+6. Client-side validation logic
 
-Return JSON:
+Return complete JSON with exact extracted information:
 {
   "formFields": [
     {
       "name": "field_name",
       "type": "field_type", 
-      "selector": "best_selector",
+      "selector": "exact_css_selector",
       "required": boolean,
       "validationLogic": {
         "hasJavaScriptValidation": boolean,
         "realTimeValidation": boolean,
-        "validationTriggers": ["events"],
-        "errorDisplayElement": "error_selector"
+        "validationTriggers": ["event_types"],
+        "errorDisplayElement": "exact_error_element_selector"
       }
     }
   ],
@@ -35,30 +37,40 @@ Return JSON:
   "clientSideValidation": {
     "errorMessages": {
       "field_name": {
-        "type": "exact_error_text"
+        "required": "exact_extracted_required_message",
+        "invalid": "exact_extracted_invalid_message"
       }
     },
     "successMessages": {
-      "submit": "exact_success_text"
+      "submit": "exact_extracted_success_message"
     }
   }
 }
 
-Use exact text from JavaScript strings. Return clean JSON only.`,
+CRITICAL: Extract EXACT text strings from JavaScript, not generic messages.
+Find exact selectors from HTML, not generic ones.`,
   temperature: 0.1,
   category: "analysis",
   buildPrompt: function (htmlContent) {
+    // Handle both string and object parameters for compatibility
+    const content =
+      typeof htmlContent === "string"
+        ? htmlContent
+        : htmlContent.content || htmlContent;
+
     return `Analyze this HTML and extract form structure:
 
-${htmlContent}
+${content}
 
-Extract:
-1. All form fields with best selectors
-2. JavaScript validation logic and exact error messages  
-3. Event listeners and validation behavior
-4. Error/success display elements
+REQUIREMENTS:
+1. Extract EXACT selectors from HTML (IDs, classes)
+2. Find all form fields and their types
+3. Identify error display elements
+4. Extract any inline JavaScript validation
+5. Find exact error message strings
+6. Identify form submission behavior
 
-Return JSON structure with extracted information.`;
+Return complete form structure JSON:`;
   },
 };
 

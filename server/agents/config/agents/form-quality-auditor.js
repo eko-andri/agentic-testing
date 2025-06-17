@@ -1,7 +1,7 @@
 // Clean Test Quality Auditor Agent Configuration
-const TEST_QUALITY_AUDITOR = {
-  name: "TEST_QUALITY_AUDITOR",
-  role: "test quality validator",
+const FORM_QUALITY_AUDITOR = {
+  name: "FORM_QUALITY_AUDITOR",
+  role: "form quality validator",
   task: "Validate and optimize test scenarios against form behavior",
   systemPrompt: `Validate test scenarios against original form structure.
 
@@ -57,4 +57,4 @@ Return optimized JSON only:`;
   },
 };
 
-module.exports = TEST_QUALITY_AUDITOR;
+module.exports = FORM_QUALITY_AUDITOR;

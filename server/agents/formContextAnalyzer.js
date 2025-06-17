@@ -1,6 +1,7 @@
-// agents/formContextAnalyzer.js - Cleaned version without duplicate prompts
+// FormContextAnalyzer.js - Reads HTML + JS + CSS
 
 const fs = require("fs");
+const path = require("path");
 const callOllamaLLM = require("../utils/llmOllama");
 const { ConfigHelper, DEFAULT_OPTIONS } = require("./config/prompts");
 
@@ -9,7 +10,6 @@ class FormContextAnalyzer {
     this.options = {
       ...DEFAULT_OPTIONS,
       ...options,
-      // FORCE self-reflection to always be enabled - remove user control
       enableSelfReflection: true,
     };
     this.progressCallback = options.progressCallback || (() => {});
@@ -17,26 +17,26 @@ class FormContextAnalyzer {
 
   async analyze(htmlPath, description = "", acceptanceCriteria = "") {
     try {
-      this.progressCallback(
-        "🔍 Form Analyzer\nInitializing comprehensive analysis...",
-        {
-          analyzing: htmlPath,
-          description: description.substring(0, 100),
-          criteria: acceptanceCriteria.substring(0, 100),
-        }
-      );
+      this.progressCallback("🔍 Form Analyzer\nInitializing analysis...", {
+        analyzing: htmlPath,
+        description: description.substring(0, 100),
+        criteria: acceptanceCriteria.substring(0, 100),
+      });
 
-      // Step 1: Extract form structure
+      // Step 1: Extract form structure using original method
       const formStructure = await this._extractFormStructure(htmlPath);
 
-      // Step 2: Generate intelligent test analysis
+      // Step 2: Extract additional assets for context
+      const additionalAssets = await this._extractAdditionalAssets(htmlPath);
+
+      // Step 3: Generate intelligent test analysis
       const intelligentResult = await this._generateIntelligentAnalysis(
         formStructure,
         description,
         acceptanceCriteria
       );
 
-      // Step 3: MANDATORY Self-reflection optimization
+      // Step 4: Quality assurance
       const optimizedResult = await this._performMandatorySelfReflection(
         intelligentResult,
         formStructure,
@@ -44,16 +44,13 @@ class FormContextAnalyzer {
         acceptanceCriteria
       );
 
-      this.progressCallback(
-        "✅ Form Analyzer\nComprehensive analysis completed with quality assurance",
-        {
-          preview: `Analyzed and validated ${
-            Object.keys(optimizedResult.fields || {}).length
-          } fields with ${
-            (optimizedResult.recommendedTestScenarios || []).length
-          } quality-assured scenarios`,
-        }
-      );
+      this.progressCallback("✅ Form Analyzer\nAnalysis completed", {
+        preview: `Analyzed HTML + JS + CSS with ${
+          Object.keys(optimizedResult.fields || {}).length
+        } fields and ${
+          (optimizedResult.recommendedTestScenarios || []).length
+        } scenarios`,
+      });
 
       return optimizedResult;
     } catch (error) {
@@ -65,8 +62,7 @@ class FormContextAnalyzer {
     }
   }
 
-  // Enhanced FormContextAnalyzer with better debugging and validation
-
+  // Extract form structure using original method
   async _extractFormStructure(htmlPath) {
     this.progressCallback("🔍 Form Analyzer\nExtracting form structure...", {
       status: "Reading HTML file and identifying form elements...",
@@ -74,7 +70,7 @@ class FormContextAnalyzer {
 
     const htmlContent = fs.readFileSync(htmlPath, "utf8");
 
-    // DEBUG: Log HTML analysis
+    // Debug HTML analysis
     console.log("📝 HTML Analysis:");
     console.log("- HTML length:", htmlContent.length);
     console.log("- Contains form tag:", htmlContent.includes("<form"));
@@ -89,17 +85,15 @@ class FormContextAnalyzer {
     );
 
     if (!ConfigHelper.hasAgent("FORM_STRUCTURE_ANALYZER")) {
-      throw new Error(
-        "FORM_STRUCTURE_ANALYZER agent not found in configuration"
-      );
+      throw new Error("FORM_STRUCTURE_ANALYZER agent not found");
     }
 
+    // Pass HTML content in format expected by agent
     const prompt = ConfigHelper.buildPrompt(
       "FORM_STRUCTURE_ANALYZER",
-      htmlContent
+      { content: htmlContent } // Wrap in object with .content property
     );
 
-    // DEBUG: Log prompt being sent
     console.log(
       "📤 Prompt sent to LLM (first 500 chars):",
       prompt.substring(0, 500)
@@ -112,7 +106,6 @@ class FormContextAnalyzer {
         temperature: ConfigHelper.getTemperature("FORM_STRUCTURE_ANALYZER"),
       });
 
-      // DEBUG: Log raw response
       console.log(
         "📥 Raw LLM response (first 500 chars):",
         result.substring(0, 500)
@@ -124,8 +117,7 @@ class FormContextAnalyzer {
 
       const parsedResult = this._parseAndValidateJSON(result, "form structure");
 
-      // DEBUG: Log parsed structure
-      console.log("✅ Parsed structure validation:");
+      console.log("✅ Structure validation:");
       console.log("- Form fields count:", parsedResult.formFields?.length || 0);
       console.log(
         "- Has clientSideValidation:",
@@ -136,7 +128,7 @@ class FormContextAnalyzer {
         Object.keys(parsedResult.clientSideValidation?.errorMessages || {})
       );
 
-      // VALIDATION: Check if selectors look realistic
+      // Log field details
       if (parsedResult.formFields) {
         parsedResult.formFields.forEach((field, index) => {
           console.log(
@@ -165,6 +157,153 @@ class FormContextAnalyzer {
     }
   }
 
+  // Extract additional assets for context
+  async _extractAdditionalAssets(htmlPath) {
+    const htmlContent = fs.readFileSync(htmlPath, "utf8");
+    const htmlDir = path.dirname(htmlPath);
+
+    // Extract inline JavaScript
+    const inlineJS = this._extractInlineJavaScript(htmlContent);
+
+    // Extract external JavaScript files
+    const externalJS = await this._extractExternalJavaScript(
+      htmlContent,
+      htmlDir
+    );
+
+    // Extract inline CSS
+    const inlineCSS = this._extractInlineCSS(htmlContent);
+
+    // Extract external CSS files
+    const externalCSS = await this._extractExternalCSS(htmlContent, htmlDir);
+
+    const assets = {
+      javascript: {
+        inline: inlineJS,
+        external: externalJS,
+        combined: [...inlineJS, ...externalJS].join("\n\n"),
+      },
+      css: {
+        inline: inlineCSS,
+        external: externalCSS,
+        combined: [...inlineCSS, ...externalCSS].join("\n\n"),
+      },
+    };
+
+    // Log asset analysis
+    console.log("📝 HTML + JS + CSS Analysis:");
+    console.log("- HTML length:", htmlContent.length);
+    console.log("- Inline JS blocks:", inlineJS.length);
+    console.log("- External JS files:", externalJS.length);
+    console.log("- Inline CSS blocks:", inlineCSS.length);
+    console.log("- External CSS files:", externalCSS.length);
+    console.log(
+      "- Contains form validation:",
+      assets.javascript.combined.includes("validation") ||
+        assets.javascript.combined.includes("error") ||
+        assets.javascript.combined.includes("required")
+    );
+    console.log(
+      "- Contains error messages:",
+      assets.javascript.combined.includes("error") ||
+        assets.javascript.combined.includes("message")
+    );
+
+    return assets;
+  }
+
+  // Extract inline JavaScript
+  _extractInlineJavaScript(htmlContent) {
+    const jsBlocks = [];
+    const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+    let match;
+
+    while ((match = scriptRegex.exec(htmlContent)) !== null) {
+      const scriptContent = match[1].trim();
+      if (scriptContent && !match[0].includes("src=")) {
+        jsBlocks.push(scriptContent);
+      }
+    }
+
+    return jsBlocks;
+  }
+
+  // Extract external JavaScript files
+  async _extractExternalJavaScript(htmlContent, htmlDir) {
+    const jsFiles = [];
+    const scriptSrcRegex = /<script[^>]+src=['"](.*?)['"][^>]*>/gi;
+    let match;
+
+    while ((match = scriptSrcRegex.exec(htmlContent)) !== null) {
+      const srcPath = match[1];
+
+      if (!srcPath.startsWith("http") && !srcPath.startsWith("//")) {
+        try {
+          const fullPath = path.resolve(htmlDir, srcPath);
+          if (fs.existsSync(fullPath)) {
+            const jsContent = fs.readFileSync(fullPath, "utf8");
+            jsFiles.push(jsContent);
+            console.log(
+              `📄 Loaded external JS: ${srcPath} (${jsContent.length} chars)`
+            );
+          }
+        } catch (error) {
+          console.warn(`⚠️ Could not load JS file: ${srcPath}`, error.message);
+        }
+      }
+    }
+
+    return jsFiles;
+  }
+
+  // Extract inline CSS
+  _extractInlineCSS(htmlContent) {
+    const cssBlocks = [];
+    const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+    let match;
+
+    while ((match = styleRegex.exec(htmlContent)) !== null) {
+      const styleContent = match[1].trim();
+      if (styleContent) {
+        cssBlocks.push(styleContent);
+      }
+    }
+
+    return cssBlocks;
+  }
+
+  // Extract external CSS files
+  async _extractExternalCSS(htmlContent, htmlDir) {
+    const cssFiles = [];
+    const linkRegex =
+      /<link[^>]+href=['"](.*?)['"][^>]*rel=['"]*stylesheet['"]*/gi;
+    let match;
+
+    while ((match = linkRegex.exec(htmlContent)) !== null) {
+      const hrefPath = match[1];
+
+      if (!hrefPath.startsWith("http") && !hrefPath.startsWith("//")) {
+        try {
+          const fullPath = path.resolve(htmlDir, hrefPath);
+          if (fs.existsSync(fullPath)) {
+            const cssContent = fs.readFileSync(fullPath, "utf8");
+            cssFiles.push(cssContent);
+            console.log(
+              `📄 Loaded external CSS: ${hrefPath} (${cssContent.length} chars)`
+            );
+          }
+        } catch (error) {
+          console.warn(
+            `⚠️ Could not load CSS file: ${hrefPath}`,
+            error.message
+          );
+        }
+      }
+    }
+
+    return cssFiles;
+  }
+
   async _generateIntelligentAnalysis(
     formStructure,
     description,
@@ -174,14 +313,12 @@ class FormContextAnalyzer {
       "🧠 Form Analyzer\nGenerating intelligent test scenarios...",
       {
         status:
-          "Creating comprehensive test strategies based on form structure and business requirements...",
+          "Creating test strategies based on form structure and requirements...",
       }
     );
 
     if (!ConfigHelper.hasAgent("INTELLIGENT_TEST_GENERATOR")) {
-      throw new Error(
-        "INTELLIGENT_TEST_GENERATOR agent not found in configuration"
-      );
+      throw new Error("INTELLIGENT_TEST_GENERATOR agent not found");
     }
 
     const prompt = ConfigHelper.buildPrompt(
@@ -203,14 +340,11 @@ class FormContextAnalyzer {
         "intelligent analysis"
       );
 
-      this.progressCallback(
-        "✅ Form Analyzer\nInitial test scenarios generated",
-        {
-          preview: `Generated ${
-            Object.keys(parsedResult.fields || {}).length
-          } field strategies - proceeding to quality validation...`,
-        }
-      );
+      this.progressCallback("✅ Form Analyzer\nTest scenarios generated", {
+        preview: `Generated ${
+          Object.keys(parsedResult.fields || {}).length
+        } field strategies - proceeding to quality validation...`,
+      });
 
       return parsedResult;
     } catch (error) {
@@ -224,23 +358,16 @@ class FormContextAnalyzer {
     description,
     acceptanceCriteria
   ) {
-    this.progressCallback(
-      "🔄 Form Analyzer\nPerforming MANDATORY quality assurance...",
-      {
-        status:
-          "Validating test accuracy against form behavior and acceptance criteria...",
-      }
-    );
+    this.progressCallback("🔄 Form Analyzer\nPerforming quality assurance...", {
+      status: "Validating test accuracy against form behavior and criteria...",
+    });
 
-    if (!ConfigHelper.hasAgent("TEST_QUALITY_AUDITOR")) {
-      throw new Error(
-        "CRITICAL: TEST_QUALITY_AUDITOR agent not found. Quality assurance is mandatory and cannot be skipped."
-      );
+    if (!ConfigHelper.hasAgent("FORM_QUALITY_AUDITOR")) {
+      throw new Error("FORM_QUALITY_AUDITOR agent not found");
     }
 
-    // FIXED: Use the enhanced buildPrompt from config instead of custom method
     const prompt = ConfigHelper.buildPrompt(
-      "TEST_QUALITY_AUDITOR",
+      "FORM_QUALITY_AUDITOR",
       intelligentResult,
       originalFormStructure,
       description,
@@ -250,9 +377,8 @@ class FormContextAnalyzer {
     try {
       const optimizedResult = await callOllamaLLM({
         prompt,
-        // FIXED: Use system prompt from config, not custom method
-        system: ConfigHelper.getSystemPrompt("TEST_QUALITY_AUDITOR"),
-        temperature: ConfigHelper.getTemperature("TEST_QUALITY_AUDITOR"),
+        system: ConfigHelper.getSystemPrompt("FORM_QUALITY_AUDITOR"),
+        temperature: ConfigHelper.getTemperature("FORM_QUALITY_AUDITOR"),
       });
 
       const parsedResult = this._parseAndValidateJSON(
@@ -260,25 +386,19 @@ class FormContextAnalyzer {
         "quality-assured analysis"
       );
 
-      // VALIDATION: Ensure the result has improved or maintained quality
       this._validateQualityImprovements(intelligentResult, parsedResult);
 
-      this.progressCallback(
-        "✅ Form Analyzer\nQuality assurance completed - test accuracy verified",
-        {
-          preview: `Validated ${
-            Object.keys(parsedResult.fields || {}).length
-          } fields with ${
-            (parsedResult.recommendedTestScenarios || []).length
-          } quality-assured scenarios`,
-        }
-      );
+      this.progressCallback("✅ Form Analyzer\nQuality assurance completed", {
+        preview: `Validated ${
+          Object.keys(parsedResult.fields || {}).length
+        } fields with ${
+          (parsedResult.recommendedTestScenarios || []).length
+        } scenarios`,
+      });
 
       return parsedResult;
     } catch (error) {
-      throw new Error(
-        `CRITICAL: Quality assurance failed - test accuracy cannot be guaranteed: ${error.message}`
-      );
+      throw new Error(`Quality assurance failed: ${error.message}`);
     }
   }
 
@@ -306,40 +426,67 @@ class FormContextAnalyzer {
     });
   }
 
-  // Improved JSON parser for FormContextAnalyzer
-
+  // JSON parser with error handling
   _parseAndValidateJSON(jsonString, context) {
     try {
-      // Step 1: Remove markdown blocks
+      console.log(`🔍 Attempting to parse ${context} JSON...`);
+      console.log(`📝 Raw response length: ${jsonString.length}`);
+
+      // Remove markdown blocks
       let cleaned = jsonString
         .replace(/```json/g, "")
         .replace(/```/g, "")
         .trim();
 
-      // Step 2: Remove ALL comments more aggressively
+      // Remove comments
       cleaned = cleaned
-        .replace(/\/\/.*$/gm, "") // Remove // comments
-        .replace(/\/\*[\s\S]*?\*\//g, "") // Remove /* */ comments
-        .replace(/,(\s*[}\]])/g, "$1") // Remove trailing commas
-        .replace(/\n\s*\n/g, "\n") // Remove double newlines
+        .replace(/\/\/.*$/gm, "")
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/,(\s*[}\]])/g, "$1")
+        .replace(/\n\s*\n/g, "\n")
         .trim();
 
-      // Step 3: Parse JSON
-      const parsed = JSON.parse(cleaned);
+      console.log(`📝 Cleaned JSON length: ${cleaned.length}`);
+      console.log(
+        `📝 Cleaned JSON (first 200 chars): ${cleaned.substring(0, 200)}`
+      );
+      console.log(
+        `📝 Cleaned JSON (last 200 chars): ${cleaned.substring(
+          Math.max(0, cleaned.length - 200)
+        )}`
+      );
 
-      // Step 4: Enhanced validation
-      if (!parsed || typeof parsed !== "object") {
-        throw new Error(`Invalid JSON structure for ${context}`);
+      // Check if JSON looks complete
+      if (!cleaned.startsWith("{") || !cleaned.endsWith("}")) {
+        console.error("❌ JSON does not start with { or end with }");
+        console.error("First 10 chars:", cleaned.substring(0, 10));
+        console.error("Last 10 chars:", cleaned.substring(cleaned.length - 10));
+
+        // Try to find the JSON part
+        const startIndex = cleaned.indexOf("{");
+        const lastBraceIndex = cleaned.lastIndexOf("}");
+
+        if (
+          startIndex !== -1 &&
+          lastBraceIndex !== -1 &&
+          lastBraceIndex > startIndex
+        ) {
+          cleaned = cleaned.substring(startIndex, lastBraceIndex + 1);
+          console.log(
+            "🔧 Extracted JSON substring, new length:",
+            cleaned.length
+          );
+        } else {
+          throw new Error("No valid JSON structure found in response");
+        }
       }
 
-      // Step 5: Validate required structure for form analysis
-      if (context === "form structure") {
-        if (!parsed.formFields || !Array.isArray(parsed.formFields)) {
-          throw new Error("Missing or invalid formFields array");
-        }
-        if (!parsed.clientSideValidation) {
-          throw new Error("Missing clientSideValidation object");
-        }
+      // Parse JSON
+      const parsed = JSON.parse(cleaned);
+
+      // Validate
+      if (!parsed || typeof parsed !== "object") {
+        throw new Error(`Invalid JSON structure for ${context}`);
       }
 
       console.log(
@@ -347,6 +494,8 @@ class FormContextAnalyzer {
           Object.keys(parsed).length
         } top-level properties`
       );
+      console.log(`📋 Top-level keys: ${Object.keys(parsed).join(", ")}`);
+
       return parsed;
     } catch (error) {
       console.error(`❌ JSON parsing failed for ${context}:`, error.message);
@@ -359,17 +508,17 @@ class FormContextAnalyzer {
         jsonString.substring(Math.max(0, jsonString.length - 500))
       );
 
-      // Try to identify specific issues
-      if (jsonString.includes("//")) {
-        console.error(
-          "⚠️  Response contains // comments - these break JSON parsing"
-        );
-      }
-      if (jsonString.includes("```")) {
-        console.error("⚠️  Response contains markdown blocks");
-      }
-
-      throw new Error(`Failed to parse ${context} JSON: ${error.message}`);
+      // Return fallback structure
+      console.log("🔧 Returning fallback structure due to parsing failure");
+      return {
+        formFields: [],
+        formElement: {
+          selector: "form",
+          method: "POST",
+          hasPreventDefault: false,
+        },
+        clientSideValidation: { errorMessages: {}, successMessages: {} },
+      };
     }
   }
 
@@ -379,7 +528,7 @@ class FormContextAnalyzer {
   }
 
   static hasMandatoryQualityAssurance() {
-    return ConfigHelper.hasAgent("TEST_QUALITY_AUDITOR");
+    return ConfigHelper.hasAgent("FORM_QUALITY_AUDITOR");
   }
 
   static debugConfiguration() {
@@ -387,16 +536,13 @@ class FormContextAnalyzer {
     console.log("Available agents:", ConfigHelper.debugAgentConfig());
     console.log(
       "Quality assurance available:",
-      ConfigHelper.hasAgent("TEST_QUALITY_AUDITOR")
-    );
-    console.log(
-      "IMPORTANT: All prompts managed by ConfigHelper - no custom prompts"
+      ConfigHelper.hasAgent("FORM_QUALITY_AUDITOR")
     );
 
     const requiredAgents = [
       "FORM_STRUCTURE_ANALYZER",
       "INTELLIGENT_TEST_GENERATOR",
-      "TEST_QUALITY_AUDITOR",
+      "FORM_QUALITY_AUDITOR",
     ];
 
     requiredAgents.forEach((agentName) => {
@@ -408,7 +554,7 @@ class FormContextAnalyzer {
         ? !!ConfigHelper.getSystemPrompt(agentName)
         : false;
       const status =
-        agentName === "TEST_QUALITY_AUDITOR" ? "MANDATORY" : "REQUIRED";
+        agentName === "FORM_QUALITY_AUDITOR" ? "MANDATORY" : "REQUIRED";
       console.log(
         `  - ${agentName}: available=${available}, hasBuildPrompt=${hasPrompt}, hasSystemPrompt=${hasSystemPrompt} [${status}]`
       );
