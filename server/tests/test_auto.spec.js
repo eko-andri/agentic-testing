@@ -15,14 +15,14 @@ test("Valid DOB exactly 16 years old", async ({ page }) => {
   await page.goto("http://127.0.0.1:5500/policy-form.html");
   const today = new Date();
   const validDate = new Date(
-    today.getFullYear() - 20,
+    today.getFullYear() - 16,
     today.getMonth(),
     today.getDate()
   );
-  await page.locator("#dob").fill(validDate.toISOString().split("T")[0]);
-  await page.locator("button[type='submit']").click();
-  const message = await getErrorMessage(page);
-  expect(message).toContain("Form submitted successfully.");
+  await page.fill("#dob", validDate.toISOString().split("T")[0]);
+  await page.click('button[type="submit"]');
+  const message = await page.locator("#form-message").textContent();
+  expect(message).toBe("Form submitted successfully.");
 });
 
 test("DOB under 16 years old", async ({ page }) => {
@@ -33,18 +33,18 @@ test("DOB under 16 years old", async ({ page }) => {
     today.getMonth(),
     today.getDate()
   );
-  await page.locator("#dob").fill(underageDate.toISOString().split("T")[0]);
-  await page.locator("button[type='submit']").click();
-  const message = await getErrorMessage(page);
-  expect(message).toBe("Minimum age requirement not met.");
+  await page.fill("#dob", underageDate.toISOString().split("T")[0]);
+  await page.click('button[type="submit"]');
+  const errorMessage = await page.locator("#dob-error").textContent();
+  expect(errorMessage).toBe("Minimum age requirement not met.");
 });
 
 test("Empty DOB field", async ({ page }) => {
   await page.goto("http://127.0.0.1:5500/policy-form.html");
-  await page.locator("#dob").clear();
-  await page.locator("button[type='submit']").click();
-  const message = await getErrorMessage(page);
-  expect(message).toBe("DOB field is required and cannot be empty.");
+  await page.fill("#dob", "");
+  await page.click('button[type="submit"]');
+  const errorMessage = await page.locator("#dob-error").textContent();
+  expect(errorMessage).toBe("DOB field is required and cannot be empty.");
 });
 
 test("Invalid DOB format", async ({ page }) => {

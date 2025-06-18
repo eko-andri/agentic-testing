@@ -31,7 +31,7 @@ jobs:
         run: npm install -g http-server
 
       - name: Start HTTP Server
-        run: http-server -p 5500 &
+        run: http-server -p 5500 --cors --gzip &
 
       - name: Wait for Server to Start
         run: sleep 5
