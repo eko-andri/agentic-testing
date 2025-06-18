@@ -23,9 +23,15 @@ jobs:
         working-directory: server
         run: npm install
 
-      - name: Install Playwright Browsers
+      # Download all browsers for Playwright
+      # - name: Install Playwright Browsers
+      #   working-directory: server
+      #   run: npx playwright install
+
+      # Download only Chromium browser for Playwright
+      - name: Install Playwright Chromium
         working-directory: server
-        run: npx playwright install
+        run: npx playwright install chromium
 
       - name: Install HTTP Server
         run: npm install -g http-server
