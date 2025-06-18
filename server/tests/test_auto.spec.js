@@ -64,3 +64,11 @@ test("Invalid DOB format", async ({ page }) => {
   const message = await getErrorMessage(page);
   expect(message).toBe("DOB format is invalid.");
 });
+
+test("Invalid DOB format with slashes", async ({ page }) => {
+  await page.goto("http://127.0.0.1:5500/policy-form.html");
+  await page.fill("#dob", "2020/01/01"); // Invalid format
+  await page.click('button[type="submit"]');
+  const errorMessage = await page.locator("#dob-error").textContent();
+  expect(errorMessage).toBe("DOB format is invalid.");
+});
