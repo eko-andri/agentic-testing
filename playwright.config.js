@@ -1,3 +1,4 @@
+// Triggering commit to test playwright configuration
 const { defineConfig } = require("@playwright/test");
 
 module.exports = defineConfig({
