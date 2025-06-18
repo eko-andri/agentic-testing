@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon e2e-server.js",
+    "dev": "nodemon e2e-server.js --ignore tests/",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

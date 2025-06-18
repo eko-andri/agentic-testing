@@ -1,66 +1,31 @@
-// Test code for Playwright tests based on the provided form analysis and requirements.
+const { test, expect } = require('@playwright/test');
 
-const { test, expect } = require("@playwright/test");
+test.describe('Policy Form', () => {
+  let page;
 
-async function getErrorMessage(page) {
-  const messageLocator = page.locator("#form-message");
-  await messageLocator
-    .waitFor({ state: "visible", timeout: 1000 })
-    .catch(() => {});
-  const text = await messageLocator.textContent();
-  return text?.trim() || null;
-}
-
-test("Valid DOB exactly 16 years old", async ({ page }) => {
-  await page.goto("http://127.0.0.1:5500/policy-form.html");
-  const today = new Date();
-  const validDate = new Date(
-    today.getFullYear() - 20,
-    today.getMonth(),
-    today.getDate()
-  );
-  await page.locator("#dob").fill(validDate.toISOString().split("T")[0]);
-  await page.locator("button[type='submit']").click();
-  const message = await getErrorMessage(page);
-  expect(message).toContain("Form submitted successfully.");
-});
-
-test("DOB under 16 years old", async ({ page }) => {
-  await page.goto("http://127.0.0.1:5500/policy-form.html");
-  const today = new Date();
-  const underageDate = new Date(
-    today.getFullYear() - 15,
-    today.getMonth(),
-    today.getDate()
-  );
-  await page.locator("#dob").fill(underageDate.toISOString().split("T")[0]);
-  await page.locator("button[type='submit']").click();
-  const message = await getErrorMessage(page);
-  expect(message).toBe("Minimum age requirement not met.");
-});
-
-test("Empty DOB field", async ({ page }) => {
-  await page.goto("http://127.0.0.1:5500/policy-form.html");
-  await page.locator("#dob").clear();
-  await page.locator("button[type='submit']").click();
-  const message = await getErrorMessage(page);
-  expect(message).toBe("DOB field is required and cannot be empty.");
-});
-
-test("Invalid DOB format", async ({ page }) => {
-  await page.goto("http://127.0.0.1:5500/policy-form.html");
-  const dobField = page.locator("#dob");
-  await dobField.fill("2020-01-01");
-  await page.evaluate(() => {
-    const input = document.getElementById("dob");
-    Object.defineProperty(input, "value", {
-      get: function () {
-        return "invalid-date-string";
-      },
-      configurable: true,
-    });
+  beforeEach(async ({ browser }) => {
+    page = await browser.newPage();
+    await page.goto('http://127.0.0.1:5500/policy-form.html');
   });
-  await page.locator("button[type='submit']").click();
-  const message = await getErrorMessage(page);
-  expect(message).toBe("DOB format is invalid.");
+
+  test('Valid DOB entry (16 years old)', async () => {
+    await page.fill('#dob', '2007-07-18');
+    await expect(page).toHaveURL(/policy-form\.html/);
+    await expect(page.locator('#dob-error')).toBeHidden();
+  });
+
+  test('DOB entry is empty (required validation)', async () => {
+    await page.fill('#dob', '');
+    await expect(page.locator('#dob-error')).toHaveText('DOB field is required and cannot be empty.');
+  });
+
+  test('Invalid DOB entry (not a date)', async () => {
+    await page.fill('#dob', 'abc');
+    await expect(page.locator('#dob-error')).toHaveText('DOB field must accept only dates.');
+  });
+
+  test('DOB entry is less than 16 years old (age requirement)', async () => {
+    await page.fill('#dob', '2009-07-18');
+    await expect(page.locator('#dob-error')).toHaveText('Minimum age requirement not met.');
+  });
 });

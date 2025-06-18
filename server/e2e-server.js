@@ -36,11 +36,11 @@ app.post("/api/run-e2e", async (req, res) => {
     description,
     acceptanceCriteria,
     htmlPath,
+    testUrl,
     extras,
     enabledAgents: {
       formAnalyzer: true, // ✅ Self-reflecting form analysis
       testGenerator: true, // ✅ Generate test code (was disabled!)
-      reviewAgent: false, // ✅ Review generated code (was disabled!)
     },
     // New configuration options
     outputFormat: "playwright",
@@ -52,7 +52,6 @@ app.post("/api/run-e2e", async (req, res) => {
       includeTeardown: true,
       timeout: 5000,
       enableAccessibility: extras?.includes("accessibility") || false,
-      baseUrl: testUrl.substring(0, testUrl.lastIndexOf("/")),
     },
   });
 
