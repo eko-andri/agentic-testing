@@ -58,66 +58,16 @@ IMPROVEMENT REQUIREMENTS:
 3. Add missing test scenarios for complete coverage
 4. Implement suggested improvements for business logic
 5. Optimize code structure and add helper functions
+6. If any selector or message in test code does not exactly match formAnalysis, replace it.
+7. Do not use any string or selector not present in formAnalysis or qualityAnalysis feedback.
 
-Generate improved ${framework} test code that addresses all issues:`;
-  },
-};
+Generate improved ${framework} test code that addresses all issues:
 
-// HELPER: Test Quality Configuration
-const TEST_QUALITY_CONFIG = {
-  qualityThresholds: {
-    excellent: 90,
-    good: 80,
-    acceptable: 70,
-    needsImprovement: 60,
-    poor: 50,
-  },
-
-  coverageRequirements: {
-    selectorAccuracy: 95, // Must use correct selectors
-    messageAccuracy: 90, // Must match exact error messages
-    businessLogic: 85, // Must test form validation rules
-    scenarioCoverage: 80, // Must cover acceptance criteria
-  },
-
-  frameworkBestPractices: {
-    playwright: [
-      "Use proper async/await patterns",
-      "Use page.locator() for element selection",
-      "Use expect().toHaveText() for exact message matching",
-      "Add proper timeouts for async operations",
-      "Use beforeEach for test setup",
-    ],
-    cypress: [
-      "Use cy.get() for element selection",
-      "Use cy.should() for assertions",
-      "Implement proper wait strategies",
-      "Use custom commands for repeated actions",
-    ],
-    selenium: [
-      "Use proper WebDriver wait conditions",
-      "Implement Page Object Model patterns",
-      "Use explicit waits over implicit waits",
-      "Handle browser-specific behaviors",
-    ],
-  },
-
-  commonIssues: {
-    selectorProblems: [
-      "Using generic selectors like '.error' instead of specific '#field-error'",
-      "Incorrect form submission selectors",
-      "Non-existent element selectors",
-    ],
-    messageProblems: [
-      "Generic error messages vs exact JavaScript strings",
-      "Wrong success message expectations",
-      "Missing message validation",
-    ],
-    logicProblems: [
-      "Hardcoded dates instead of dynamic calculations",
-      "Missing boundary condition tests",
-      "Incomplete business rule validation",
-    ],
++ Constraints:
++ - Fix ALL mismatched selectors and messages.
++ - Do not assume or guess any label or string not provided.
++ - Avoid using generic class selectors (e.g., '.success-message') unless explicitly mapped.
+`;
   },
 };
 

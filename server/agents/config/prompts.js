@@ -51,18 +51,11 @@ class ConfigHelper {
 
   // PERBAIKAN: Method untuk mengecek agent availability
   static hasAgent(agentName) {
-    console.error(`AGENTS_CONFIG`, AGENTS_CONFIG);
-    debugger;
-
     return AGENTS_CONFIG.some((agent) => agent.name === agentName);
   }
 
   // PERBAIKAN: Method untuk debugging
   static debugAgentConfig() {
-    console.log(
-      "Available agents:",
-      AGENTS_CONFIG.map((a) => a.name)
-    );
     return AGENTS_CONFIG.map((agent) => ({
       name: agent.name,
       hasBuildPrompt: typeof agent.buildPrompt === "function",

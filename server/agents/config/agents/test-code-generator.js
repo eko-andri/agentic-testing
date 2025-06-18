@@ -12,6 +12,10 @@ Use EXACT information from analysis:
 - Use selectorMapping for any missing selectors
 - Use messageMapping for any missing messages
 
++ Do NOT use selectors or messages that are not explicitly provided.
++ Do NOT invent or assume success message selectors if not present.
++ Do NOT rephrase or paraphrase expectedText.
+
 Generate proper Playwright test structure with test.describe() and test() blocks.
 Use async/await patterns and proper expect() assertions.
 Include helper functions only if needed by the scenarios.
@@ -33,6 +37,11 @@ Requirements:
 4. Create helper functions based on business logic (e.g., getDateForAge if date calculations present)
 5. Use step.action to determine test actions (fill, click, verify, submit)
 6. Use step.shouldBeVisible for element visibility assertions
+
++ Constraints:
++ - Do not invent new selectors or messages.
++ - Do not modify any step.expectedText or selector.
++ - If selector or expectedText is missing, skip assertion.
 
 Example test structure:
 test.describe('Form Tests', () => {

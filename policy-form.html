@@ -15,8 +15,7 @@
         padding: 2rem 1.5rem;
         border-radius: 12px;
         box-shadow: 0 4px 24px rgba(44, 62, 80, 0.08);
-      "
-    >
+      ">
       <h2>Policy Form (Test DOB)</h2>
       <form id="policy-form" novalidate>
         <div class="field-group">
@@ -25,8 +24,7 @@
           <div
             id="dob-error"
             class="error-message"
-            style="margin-top: 0.25rem; color: #e53935"
-          ></div>
+            style="margin-top: 0.25rem; color: #e53935"></div>
         </div>
         <button type="submit">Submit</button>
         <div id="form-message" style="margin-top: 1rem"></div>
@@ -60,6 +58,10 @@
         }
         if (age < 16) {
           dobError.textContent = "Minimum age requirement not met.";
+          return;
+        }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+          dobError.textContent = "DOB format is invalid.";
           return;
         }
         // If valid, clear error
