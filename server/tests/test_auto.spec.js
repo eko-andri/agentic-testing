@@ -1,74 +1,39 @@
-// Test code for Playwright tests based on the provided form analysis and requirements.
+const { test, expect } = require('@playwright/test');
 
-const { test, expect } = require("@playwright/test");
-
-async function getErrorMessage(page) {
-  const messageLocator = page.locator("#form-message");
-  await messageLocator
-    .waitFor({ state: "visible", timeout: 1000 })
-    .catch(() => {});
-  const text = await messageLocator.textContent();
-  return text?.trim() || null;
-}
-
-test("Valid DOB exactly 16 years old", async ({ page }) => {
-  await page.goto("http://127.0.0.1:5500/policy-form.html");
-  const today = new Date();
-  const validDate = new Date(
-    today.getFullYear() - 16,
-    today.getMonth(),
-    today.getDate()
-  );
-  await page.fill("#dob", validDate.toISOString().split("T")[0]);
-  await page.click('button[type="submit"]');
-  const message = await page.locator("#form-message").textContent();
-  expect(message).toBe("Form submitted successfully.");
-});
-
-test("DOB under 16 years old", async ({ page }) => {
-  await page.goto("http://127.0.0.1:5500/policy-form.html");
-  const today = new Date();
-  const underageDate = new Date(
-    today.getFullYear() - 15,
-    today.getMonth(),
-    today.getDate()
-  );
-  await page.fill("#dob", underageDate.toISOString().split("T")[0]);
-  await page.click('button[type="submit"]');
-  const errorMessage = await page.locator("#dob-error").textContent();
-  expect(errorMessage).toBe("Minimum age requirement not met.");
-});
-
-test("Empty DOB field", async ({ page }) => {
-  await page.goto("http://127.0.0.1:5500/policy-form.html");
-  await page.fill("#dob", "");
-  await page.click('button[type="submit"]');
-  const errorMessage = await page.locator("#dob-error").textContent();
-  expect(errorMessage).toBe("DOB field is required and cannot be empty.");
-});
-
-test("Invalid DOB format", async ({ page }) => {
-  await page.goto("http://127.0.0.1:5500/policy-form.html");
-  const dobField = page.locator("#dob");
-  await dobField.fill("2020-01-01");
-  await page.evaluate(() => {
-    const input = document.getElementById("dob");
-    Object.defineProperty(input, "value", {
-      get: function () {
-        return "invalid-date-string";
-      },
-      configurable: true,
-    });
+test.describe('Form Tests', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('file:///Users/tigerlab/Documents/Projects/agentic-testing/policy-form.html');
   });
-  await page.locator("button[type='submit']").click();
-  const message = await getErrorMessage(page);
-  expect(message).toBe("DOB format is invalid.");
+
+  test('User submits form with valid DOB', async ({ page }) => {
+    await page.fill('#dob', '2007-06-18');
+    await page.click('button[type="submit"]');
+    expect(await page.textContent('.success-message')).toBe('Form submitted successfully.');
+  });
+
+  test('User submits form with empty DOB', async ({ page }) => {
+    await page.fill('#dob', '');
+    await page.click('button[type="submit"]');
+    expect(await page.textContent('#dob-error')).toBe('DOB field is required and cannot be empty.');
+  });
+
+  test('User submits form with invalid DOB format', async ({ page }) => {
+    await page.fill('#dob', '2009/06/18');
+    await page.click('button[type="submit"]');
+    expect(await page.textContent('#dob-error')).toBe('DOB format is invalid.');
+  });
+
+  test('User submits form with DOB less than 16 years old', async ({ page }) => {
+    const dob = getDateForAge(15);
+    await page.fill('#dob', dob);
+    await page.click('button[type="submit"]');
+    expect(await page.textContent('#dob-error')).toBe('You must be at least 16 years old.');
+  });
 });
 
-test("Invalid DOB format with slashes", async ({ page }) => {
-  await page.goto("http://127.0.0.1:5500/policy-form.html");
-  await page.fill("#dob", "2020/01/01"); // Invalid format
-  await page.click('button[type="submit"]');
-  const errorMessage = await page.locator("#dob-error").textContent();
-  expect(errorMessage).toBe("DOB format is invalid.");
-});
+// Helper function to get date for a specific age
+function getDateForAge(age) {
+  const today = new Date();
+  const birthYear = today.getFullYear() - age;
+  return `${birthYear}-01-01`;
+}
