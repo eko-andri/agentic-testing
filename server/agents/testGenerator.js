@@ -28,7 +28,8 @@ class TestGenerator {
         {
           status: `Preparing to generate ${framework} tests for ${
             Object.keys(formAnalysis.fields || {}).length
-          } form fields`,
+            } form fields`,
+          prompt: `Generating tests for ${testUrl} using ${framework} and "\n"form"\n" ${JSON.stringify(formAnalysis)}`,
         }
       );
 
