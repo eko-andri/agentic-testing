@@ -70,4 +70,18 @@ async function callOllamaLLM({
   }
 }
 
-module.exports = callOllamaLLM;
+const provider = process.env.LLM_PROVIDER || "ollama";
+
+const PROVIDERS = {
+  ollama: callOllamaLLM,
+  bedrock: callOllamaLLM,
+  // bedrock: callBedrockLLM,
+};
+
+async function callLLM(config) {
+  const selected = provider.toLowerCase();
+  const fn = PROVIDERS[selected] || callOllamaLLM;
+  return await fn(config);
+}
+
+module.exports = callLLM;

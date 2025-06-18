@@ -1,6 +1,6 @@
 const { FormContextAnalyzer } = require("../agents/formContextAnalyzer");
 const { TestGenerator } = require("../agents/testGenerator");
-const TestReviewAgent = require("../agents/testReviewAgent");
+
 const {
   updateProgress,
   resetProgress,
@@ -15,7 +15,6 @@ class Orchestrator {
     enabledAgents = {
       formAnalyzer: true,
       testGenerator: true,
-      reviewAgent: true,
     },
     outputFormat = "playwright",
     framework = "playwright",
@@ -29,10 +28,8 @@ class Orchestrator {
     this.outputFormat = outputFormat;
     this.framework = framework;
     this.testGeneratorOptions = testGeneratorOptions;
-
     this.formContext = null;
 
-    // Initialize test generator with progress callback
     this.testGenerator = new TestGenerator({
       framework: this.framework,
       timeout: testGeneratorOptions.timeout || 5000,
@@ -42,7 +39,6 @@ class Orchestrator {
     });
   }
 
-  // Progress callback for all agents
   updateProgressCallback(status, details = {}) {
     updateProgress({
       status,
@@ -72,21 +68,18 @@ class Orchestrator {
           progressCallback: this.updateProgressCallback.bind(this),
         });
 
-        const result = await analyzer.analyze(
+        return await analyzer.analyze(
           this.htmlPath,
           this.description || "",
           this.acceptanceCriteria || ""
         );
-
-        console.log("[Progress] Form analysis completed:", result);
-        return result;
       });
 
       if (!this.formContext) {
         return { success: false, message: "Form analysis failed" };
       }
 
-      // Step 2: Test Generation
+      // Step 2: Test Generation (internal quality + improvement included)
       if (this.skipIfDisabled("testGenerator")) {
         return this.skipResult("Test Generator", {
           formContext: this.formContext,
@@ -107,23 +100,15 @@ class Orchestrator {
               this.testGeneratorOptions.generateDataTestIds || false,
           };
 
-          const result = await this.testGenerator.generateTests(
+          return await this.testGenerator.generateTests(
             this.formContext,
             testUrl,
             generationOptions
           );
-
-          console.log("[Progress] Test generation completed:", {
-            framework: result.framework,
-            testCount: result.metadata.scenariosCount,
-            estimatedTime: result.metadata.estimatedExecutionTime,
-          });
-
-          return result;
         }
       );
 
-      if (!testGenerationResult || !testGenerationResult.code) {
+      if (!testGenerationResult?.code) {
         return {
           success: false,
           message: "Test generation failed",
@@ -131,79 +116,22 @@ class Orchestrator {
         };
       }
 
-      // Step 3: Code Review
-      if (this.skipIfDisabled("reviewAgent")) {
-        return this.skipResult("Review Agent", {
-          formContext: this.formContext,
-          testCode: testGenerationResult.code,
-          testMetadata: testGenerationResult.metadata,
-        });
-      }
-
-      const reviewResult = await this.runAgentStep("Review Agent", async () => {
-        updateProgress({
-          status:
-            "🔍 Review Agent\nAnalyzing code quality and best practices...",
-        });
-
-        const agent = new TestReviewAgent();
-
-        const reviewOptions = {
-          framework: this.framework,
-          outputFormat: this.outputFormat,
-          checkSyntax: true,
-          checkBestPractices: true,
-          checkAccessibility:
-            this.testGeneratorOptions.enableAccessibility || false,
-          testMetadata: testGenerationResult.metadata,
-          validationReport: testGenerationResult.validationReport,
-        };
-
-        const result = await agent.evaluate(
-          testGenerationResult.code,
-          reviewOptions
-        );
-
-        updateProgress({
-          status: result.approved
-            ? "✅ Review Agent\nCode quality review passed"
-            : "❌ Review Agent\nCode quality review failed",
-          playwrightCode: testGenerationResult.code,
-        });
-
-        return {
-          approved: result.approved,
-          code: testGenerationResult.code,
-          message: result.feedback || "Review completed",
-          score: result.score || 0,
-        };
-      });
-
-      if (!reviewResult) {
-        return {
-          success: false,
-          message: "Review failed",
-          formContext: this.formContext,
-          testCode: testGenerationResult.code,
-        };
-      }
-
       // Final success
       updateProgress({
         status: "✅ Pipeline Completed\nTest generation successful",
-        playwrightCode: reviewResult.code,
+        playwrightCode: testGenerationResult.code,
         prompt: `Generated ${testGenerationResult.metadata.scenariosCount} test scenarios for ${this.framework}`,
       });
 
       return {
         success: true,
         formAnalysis: this.formContext,
-        testCode: reviewResult.code,
+        testCode: testGenerationResult.code,
         testMetadata: testGenerationResult.metadata,
         validationReport: testGenerationResult.validationReport,
         outputFormat: this.outputFormat,
         framework: this.framework,
-        reviewFeedback: reviewResult.message,
+        reviewFeedback: testGenerationResult.feedback || "",
         executionEstimate: testGenerationResult.metadata.estimatedExecutionTime,
         message: "✅ Test generation completed successfully",
       };
@@ -212,8 +140,6 @@ class Orchestrator {
         status: "❌ Pipeline Failed\nOrchestration error occurred",
         prompt: error.message,
       });
-
-      console.error("Orchestrator error:", error);
 
       return {
         success: false,
@@ -225,13 +151,8 @@ class Orchestrator {
   }
 
   buildTestUrl() {
-    if (this.htmlPath.startsWith("http")) {
-      return this.htmlPath;
-    }
-
-    if (this.htmlPath.startsWith("/")) {
-      return `file://${this.htmlPath}`;
-    }
+    if (this.htmlPath.startsWith("http")) return this.htmlPath;
+    if (this.htmlPath.startsWith("/")) return `file://${this.htmlPath}`;
 
     const baseUrl =
       this.testGeneratorOptions.baseUrl || "http://localhost:3000";
@@ -254,13 +175,9 @@ class Orchestrator {
 
   async runAgentStep(name, agentFn) {
     try {
-      const result = await agentFn();
-      return result;
+      return await agentFn();
     } catch (err) {
-      updateProgress({
-        status: `❌ ${name} failed`,
-        prompt: err.message,
-      });
+      updateProgress({ status: `❌ ${name} failed`, prompt: err.message });
       throw err;
     }
   }
