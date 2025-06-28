@@ -1,7 +1,14 @@
 // utils/llmOllama.js
 const axios = require("axios");
+const callBedrockClaude4 = require("./bedrockClaude4");
 
 const AI = {
+  claude: {
+    sonnet3: "anthropic.claude-3-sonnet-20240229-v1:0",
+    sonnet35v2: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+    sonnet37: "anthropic.claude-3-7-sonnet-20250219-v1:0",
+    sonnet4: "anthropic.claude-sonnet-4-20250514-v1:0",
+  },
   deepseek: {
     large: "deepseek-r1:8b",
     larger: "deepseek-r1:32b",
@@ -74,8 +81,8 @@ const provider = process.env.LLM_PROVIDER || "ollama";
 
 const PROVIDERS = {
   ollama: callOllamaLLM,
-  bedrock: callOllamaLLM,
-  // bedrock: callBedrockLLM,
+  bedrock: callBedrockClaude4,
+  claude: callBedrockClaude4,
 };
 
 async function callLLM(config) {

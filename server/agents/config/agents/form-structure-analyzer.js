@@ -70,7 +70,39 @@ REQUIREMENTS:
 5. Find exact error message strings
 6. Identify form submission behavior
 
-Return complete form structure JSON:`;
+Return ONLY valid JSON, do not include any explanation, markdown, or code block. The JSON must match this structure exactly:
+{
+  "formFields": [
+    {
+      "name": "field_name",
+      "type": "field_type",
+      "selector": "exact_css_selector",
+      "required": boolean,
+      "validationLogic": {
+        "hasJavaScriptValidation": boolean,
+        "realTimeValidation": boolean,
+        "validationTriggers": ["event_types"],
+        "errorDisplayElement": "exact_error_element_selector"
+      }
+    }
+  ],
+  "formElement": {
+    "selector": "form_selector",
+    "method": "form_method",
+    "hasPreventDefault": boolean
+  },
+  "clientSideValidation": {
+    "errorMessages": {
+      "field_name": {
+        "required": "exact_extracted_required_message",
+        "invalid": "exact_extracted_invalid_message"
+      }
+    },
+    "successMessages": {
+      "submit": "exact_extracted_success_message"
+    }
+  }
+}`;
   },
 };
 

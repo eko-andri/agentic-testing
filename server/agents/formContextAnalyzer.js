@@ -36,6 +36,38 @@ class FormContextAnalyzer {
         acceptanceCriteria
       );
 
+      // Tambahkan validasi hasil LLM sebelum QA
+      if (
+        !intelligentResult.fields ||
+        Object.keys(intelligentResult.fields).length === 0
+      ) {
+        this.progressCallback(
+          "⚠️ Form Analyzer\nNo fields found in intelligent analysis result",
+          {
+            error:
+              "No fields in intelligentResult. Skipping quality assurance.",
+          }
+        );
+        throw new Error(
+          "No fields in intelligentResult. Skipping quality assurance."
+        );
+      }
+      if (
+        !intelligentResult.recommendedTestScenarios ||
+        intelligentResult.recommendedTestScenarios.length === 0
+      ) {
+        this.progressCallback(
+          "⚠️ Form Analyzer\nNo test scenarios found in intelligent analysis result",
+          {
+            error:
+              "No test scenarios in intelligentResult. Skipping quality assurance.",
+          }
+        );
+        throw new Error(
+          "No test scenarios in intelligentResult. Skipping quality assurance."
+        );
+      }
+
       // Step 4: Quality assurance
       const optimizedResult = await this._performMandatorySelfReflection(
         intelligentResult,

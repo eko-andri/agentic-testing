@@ -64,6 +64,16 @@ class Orchestrator {
         return this.skipResult("Form Analyzer");
       }
 
+      // 1. Input untuk agent pertama
+      this.updateProgressCallback("[1/7] Input untuk Form Analyzer", {
+        prompt: `HTML Path: ${this.htmlPath}\nDescription: ${this.description}\nAcceptance Criteria: ${this.acceptanceCriteria}`,
+      });
+
+      // 2. Proses agent pertama
+      this.updateProgressCallback("[2/7] Memproses Form Analyzer", {
+        status: "Menjalankan analisis form...",
+      });
+
       const analyzer = new FormContextAnalyzer({
         outputFormat: this.outputFormat,
         framework: this.framework,
@@ -76,109 +86,60 @@ class Orchestrator {
         this.acceptanceCriteria || ""
       );
 
+      // 3. Output agent pertama
+      this.updateProgressCallback("[3/7] Output Form Analyzer", {
+        preview:
+          JSON.stringify(formContext, null, 2).slice(0, 500) +
+          (JSON.stringify(formContext).length > 500 ? "..." : ""),
+      });
+
       this.formContext = formContext;
       if (!formContext || this.skipIfDisabled("testGenerator")) {
-        return this.skipResult("Test Generator", { formContext });
+        return this.skipResult("Test Generator");
       }
 
-      const testUrl = this.testUrl;
-      const generationOptions = {
-        framework: this.framework,
-        includeSetup: this.testGeneratorOptions.includeSetup !== false,
-        includeTeardown: this.testGeneratorOptions.includeTeardown !== false,
-        generateDataTestIds:
-          this.testGeneratorOptions.generateDataTestIds || false,
-      };
+      // 4. Input untuk agent kedua
+      this.updateProgressCallback("[4/7] Input untuk Test Generator", {
+        prompt: `FormContext: ${JSON.stringify(formContext).slice(
+          0,
+          200
+        )}...\nTest URL: ${this.testUrl}`,
+      });
 
-      let attempt = 1;
-      let preservedPassed = [];
-      let verifierIssues = [];
+      // 5. Proses agent kedua
+      this.updateProgressCallback("[5/7] Memproses Test Generator", {
+        status: "Menjalankan test generator...",
+      });
 
-      while (attempt <= 3) {
-        updateProgress({ status: `🧪 Test Generation Attempt ${attempt}` });
+      const testResult = await this.testGenerator.generateTests(
+        formContext,
+        this.testUrl,
+        this.testGeneratorOptions
+      );
 
-        let testResult;
+      // 6. Output agent kedua
+      this.updateProgressCallback("[6/7] Output Test Generator", {
+        preview:
+          JSON.stringify(testResult, null, 2).slice(0, 500) +
+          (JSON.stringify(testResult).length > 500 ? "..." : ""),
+      });
 
-        try {
-          testResult = await this.testGenerator.generateTests(
-            formContext,
-            testUrl,
-            generationOptions,
-            preservedPassed
-          );
-        } catch (err) {
-          verifierIssues.push(err.message);
-          attempt++;
-          continue; // 🛑 Skip ke iterasi berikutnya
-        }
-
-        if (!testResult || !testResult.code) {
-          attempt++;
-          continue;
-        }
-
-        const runResult = await runner.runTestCode(testResult.code);
-
-        if (!runResult || !Array.isArray(runResult.failed)) {
-          throw new Error("Test runner did not return valid results");
-        }
-
-        if (runResult.errors && runResult.errors.length > 0) {
-          throw new Error(
-            `Test execution failed: ${runResult.errors
-              .map((e) => e.message)
-              .join(" | ")}`
-          );
-        }
-
-        if (runResult.failed.length === 0) {
-          const scenarioCount =
-            testResult?.metadata?.scenariosCount || preservedPassed.length || 0;
-
-          updateProgress({
-            status: "✅ Pipeline Completed\nTest generation successful",
-            playwrightCode: testResult.code,
-            prompt: `Generated ${scenarioCount} test scenarios for ${this.framework}`,
-          });
-
-          return {
-            success: true,
-            formAnalysis: this.formContext,
-            testCode: testResult.code,
-            testMetadata: testResult.metadata || {},
-            validationReport: testResult.validationReport || {},
-            outputFormat: this.outputFormat,
-            framework: this.framework,
-            reviewFeedback: testResult.feedback || "",
-            executionEstimate:
-              testResult.metadata?.estimatedExecutionTime || "",
-            message: "✅ Test generation completed successfully",
-          };
-        }
-
-        preservedPassed = runResult.passed || [];
-        this.formContext.recommendedTestScenarios = runResult.failed || [];
-
-        // 🧠 Simpan issue terakhir dari verifier untuk dikirim ke UI
-        if (testResult.validationReport?.verifierResult?.issues) {
-          verifierIssues = testResult.validationReport.verifierResult.issues;
-        }
-
-        attempt++;
-      }
-
-      updateProgress({
-        status: "❌ Pipeline Failed\nExceeded max retries",
-        prompt:
-          verifierIssues.length > 0
-            ? `Verifier issues:\n- ${verifierIssues.join("\n- ")}`
-            : "Test generation failed after 3 attempts",
+      // 7. Selesai
+      this.updateProgressCallback("[7/7] Pipeline Selesai", {
+        status: "Pipeline selesai tanpa error.",
       });
 
       return {
-        success: false,
-        message: "Test generation failed after 3 attempts",
-        formContext: this.formContext,
+        success: true,
+        formAnalysis: this.formContext,
+        testCode: testResult.code,
+        testMetadata: testResult.metadata || {},
+        validationReport: testResult.validationReport || {},
+        outputFormat: this.outputFormat,
+        framework: this.framework,
+        reviewFeedback: testResult.feedback || "",
+        executionEstimate: testResult.metadata?.estimatedExecutionTime || "",
+        message: "✅ Test generation completed successfully",
       };
     } catch (error) {
       updateProgress({
