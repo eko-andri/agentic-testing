@@ -24,7 +24,8 @@ const PROVIDERS = {
     handler: null, // Will be set below
     available: true,
     defaultModel: "qwen2.5-coder:7b", // Back to 7B as primary untuk performa optimal
-    description: "Local Ollama server with Qwen 2.5 Coder 7B (optimal for M1 16GB)",
+    description:
+      "Local Ollama server with Qwen 2.5 Coder 7B (optimal for M1 16GB)",
   },
 
   "ollama-advanced": {
@@ -32,7 +33,8 @@ const PROVIDERS = {
     handler: null, // Will be set below
     available: true,
     defaultModel: "qwen3:14b",
-    description: "Local Ollama server with Qwen 3 14B (untuk task kompleks, butuh waktu)",
+    description:
+      "Local Ollama server with Qwen 3 14B (untuk task kompleks, butuh waktu)",
   },
 
   bedrock: {
@@ -60,12 +62,13 @@ async function callOllamaLLM({
   model = "qwen2.5-coder:7b",
 }) {
   const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
-  
+
   // Adaptive timeout berdasarkan model size
-  const timeoutMs = model.includes("14b") || model.includes("32b") ? 
-    (process.env.LLM_TIMEOUT || 600000) : // 10 menit untuk model besar
-    300000; // 5 menit untuk model standard
-  
+  const timeoutMs =
+    model.includes("14b") || model.includes("32b")
+      ? process.env.LLM_TIMEOUT || 600000 // 10 menit untuk model besar
+      : 300000; // 5 menit untuk model standard
+
   const requestBody = {
     model,
     prompt: system ? `${system}\n\n${prompt}` : prompt,
@@ -78,7 +81,11 @@ async function callOllamaLLM({
     },
   };
 
-  console.log(`Calling Ollama API with model: ${model} ${temperature} (timeout: ${timeoutMs/1000}s)`);
+  console.log(
+    `Calling Ollama API with model: ${model} ${temperature} (timeout: ${
+      timeoutMs / 1000
+    }s)`
+  );
 
   try {
     const response = await axios.post(
@@ -103,7 +110,9 @@ async function callOllamaLLM({
     }
     if (error.code === "ECONNABORTED" || error.message.includes("timeout")) {
       throw new Error(
-        `Ollama API timeout after ${timeoutMs/1000}s. Model ${model} might be too large for available memory.`
+        `Ollama API timeout after ${
+          timeoutMs / 1000
+        }s. Model ${model} might be too large for available memory.`
       );
     }
     throw new Error(`Ollama API call failed: ${error.message}`);
@@ -216,8 +225,12 @@ function initializeProviders() {
   // Test Ollama connection with optimal model
   const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
   console.log(`[callLLM] Testing Ollama connection at ${ollamaUrl}...`);
-  console.log(`[callLLM] Primary model: qwen2.5-coder:7b (optimal for M1 16GB)`);
-  console.log(`[callLLM] Advanced model: qwen3:14b (available untuk task kompleks)`);
+  console.log(
+    `[callLLM] Primary model: qwen2.5-coder:7b (optimal for M1 16GB)`
+  );
+  console.log(
+    `[callLLM] Advanced model: qwen3:14b (available untuk task kompleks)`
+  );
 
   // Initialize Bedrock if credentials are available
   if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
@@ -243,7 +256,9 @@ function initializeProviders() {
   }
 
   // Set Ollama with Qwen 2.5 Coder 7B as default provider (optimal untuk M1 16GB)
-  console.log("[callLLM] Setting Ollama with Qwen 2.5 Coder 7B as default provider (M1 optimized)");
+  console.log(
+    "[callLLM] Setting Ollama with Qwen 2.5 Coder 7B as default provider (M1 optimized)"
+  );
   currentProvider = "ollama";
   if (!DEFAULT_MODEL) {
     DEFAULT_MODEL = PROVIDERS.ollama.defaultModel; // qwen2.5-coder:7b
