@@ -6,7 +6,7 @@ Complete guide for installing, using, and running tests with Agentic Testing.
 
 - **Node.js** v14+ (recommended v18+)
 - **npm** or **yarn**
-- **LLM Provider**: Ollama with models like qwen2.5-coder:7b
+- **LLM Provider**: Ollama with models like qwen3:30b
 - **Browser**: Chrome/Chromium for Puppeteer
 
 ## ⚡ **Installation**
@@ -34,7 +34,7 @@ npm install
 curl -fsSL https://ollama.ai/install.sh | sh
 
 # Pull model
-ollama pull qwen2.5-coder:7b
+ollama pull qwen3:30b
 
 # Start Ollama service
 ollama serve
@@ -54,7 +54,7 @@ export AWS_REGION=us-east-1
 ```bash
 # Create .env file (optional)
 LLM_PROVIDER=ollama
-LLM_MODEL=qwen2.5-coder:7b
+LLM_MODEL=qwen3:30b
 PORT=3333
 ```
 

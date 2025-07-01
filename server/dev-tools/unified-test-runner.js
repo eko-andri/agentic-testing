@@ -280,17 +280,17 @@ class UnifiedTestRunner {
         name: "Email Validation",
         analyzing: "http://localhost:5500/policy-form.html",
         description:
-          "Validasi format email yang benar dan penolakan format email yang salah",
+          "Validate correct email format and reject invalid email format",
         criteria:
-          "Email harus mengikuti format standard (user@domain.com) dan menolak format yang tidak valid",
+          "Email must follow standard format (user@domain.com) and reject invalid formats",
       },
       {
         name: "Date Validation",
         analyzing: "http://localhost:5500/policy-form.html",
         description:
-          "Validasi tanggal lahir harus dalam format yang benar dan tidak boleh di masa depan",
+          "Validate that date of birth must be in correct format and cannot be in the future",
         criteria:
-          "User dapat memasukkan tanggal lahir yang valid dan sistem menolak tanggal masa depan",
+          "User can enter a valid date of birth and the system rejects future dates",
       },
     ];
 
@@ -1478,7 +1478,7 @@ class UnifiedTestRunner {
       console.log(`   Success Rate: ${this.results.analysis.successRate}%`);
 
       totalPassed += this.results.analysis.passed;
-      totalFailed += this.results.analysis.failed;
+
       totalTests += this.results.analysis.total;
     }
 

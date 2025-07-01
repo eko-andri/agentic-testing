@@ -23,7 +23,7 @@ const PROVIDERS = {
     name: "Ollama",
     handler: null, // Will be set below
     available: true,
-    defaultModel: "qwen2.5-coder:7b", // Back to 7B as primary untuk performa optimal
+    defaultModel: "qwen3:30b", // Back to 7B as primary untuk performa optimal
     description:
       "Local Ollama server with Qwen 2.5 Coder 7B (optimal for M1 16GB)",
   },
@@ -59,14 +59,14 @@ async function callOllamaLLM({
   prompt,
   system = "",
   temperature = 0.3,
-  model = "qwen2.5-coder:7b",
+  model = "qwen3:30b",
 }) {
   const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
 
   // Adaptive timeout berdasarkan model size
   const timeoutMs =
-    model.includes("14b") || model.includes("32b")
-      ? process.env.LLM_TIMEOUT || 600000 // 10 menit untuk model besar
+    model.includes("14b") || model.includes("30b") || model.includes("32b")
+      ? process.env.LLM_TIMEOUT || 100 // 10 menit untuk model besar
       : 300000; // 5 menit untuk model standard
 
   const requestBody = {
@@ -225,9 +225,7 @@ function initializeProviders() {
   // Test Ollama connection with optimal model
   const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
   console.log(`[callLLM] Testing Ollama connection at ${ollamaUrl}...`);
-  console.log(
-    `[callLLM] Primary model: qwen2.5-coder:7b (optimal for M1 16GB)`
-  );
+  console.log(`[callLLM] Primary model: qwen3:30b (optimal for M1 16GB)`);
   console.log(
     `[callLLM] Advanced model: qwen3:14b (available untuk task kompleks)`
   );
@@ -261,7 +259,7 @@ function initializeProviders() {
   );
   currentProvider = "ollama";
   if (!DEFAULT_MODEL) {
-    DEFAULT_MODEL = PROVIDERS.ollama.defaultModel; // qwen2.5-coder:7b
+    DEFAULT_MODEL = PROVIDERS.ollama.defaultModel; // qwen3:30b
   }
 
   console.log(
@@ -323,7 +321,7 @@ async function callLLM({
   } catch (error) {
     console.error(`[callLLM] ${targetProvider} call failed:`, error.message);
 
-    // Try fallback to legacy Ollama model first (qwen2.5-coder:7b)
+    // Try fallback to legacy Ollama model first (qwen3:30b)
     if (targetProvider === "ollama" && targetModel === "qwen3:14b") {
       console.log(`[callLLM] Attempting fallback to Qwen 2.5 Coder 7B...`);
       try {
@@ -331,7 +329,7 @@ async function callLLM({
           prompt,
           system,
           temperature,
-          model: "qwen2.5-coder:7b",
+          model: "qwen3:30b",
         });
       } catch (fallbackError) {
         console.warn(
