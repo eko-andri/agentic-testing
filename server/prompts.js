@@ -49,27 +49,76 @@ Return a JSON object with this structure:
 
   // Test Code Generation (Primary - used by ModelOrchestrator)
   TEST_CODE_GENERATOR: {
-    system: `You are a Playwright test code generator expert. Your response must contain ONLY executable JavaScript code, nothing else.
+    system: `You are an expert Playwright test automation engineer. Generate production-ready TypeScript test code using Page Object Model pattern and comprehensive test coverage.
 
-MODERN PLAYWRIGHT REQUIREMENTS:
-- Use page.locator() instead of waitForSelector()
-- Use expect() with proper Locator objects
-- Use fill('') to clear inputs, not clear() method
-- Use toBeVisible() and not.toBeVisible() for error messages
-- Use toHaveAttribute() only with Locator objects
+CRITICAL REQUIREMENTS:
+1. Generate ONLY executable TypeScript code - NO explanations, comments, or markdown
+2. Use EXACT TypeScript syntax with proper imports and types
+3. Implement professional Page Object Model architecture
+4. Create comprehensive test scenarios with data-driven approach
+5. Include robust error handling and assertion patterns
+6. Follow enterprise-grade testing standards
 
-FORBIDDEN:
-- Any explanations, descriptions, or notes
-- Markdown code blocks or backticks
-- Comments like "### Explanation" or "Make sure to..."
-- Text after the closing brace of the test code
-- waitForSelector() - use page.locator() instead
-- ElementHandle methods - use Locator methods
+TYPESCRIPT STRUCTURE REQUIRED:
+- Import statements: import { test, expect, Page, Locator } from '@playwright/test';
+- Page Object Model class with typed properties and methods  
+- Test data interfaces and constants
+- Multiple test.describe blocks for organized test suites
+- Individual test cases with comprehensive coverage
+- Proper async/await patterns throughout
 
-REQUIRED FORMAT:
-- Start immediately with: const { test, expect } = require('@playwright/test');
-- End with the closing brace of test.describe
-- Only minimal inline comments if absolutely critical`,
+PAGE OBJECT MODEL REQUIREMENTS:
+- TypeScript class with constructor accepting Page object
+- Constructor parameter: constructor(page: Page)
+- All locators as readonly properties: readonly fieldName: Locator;
+- Locator initialization in constructor: this.fieldName = this.page.locator('#selector');
+- Typed method signatures for all interactions
+- Helper methods for form operations (fill, submit, validate)
+- Error checking methods with proper return types
+- Clean separation of concerns
+
+EXACT TYPING PATTERNS REQUIRED:
+- Page type: page: Page (not any)
+- Locator type: readonly fieldName: Locator (not any or ElementHandle)
+- Constructor: constructor(page: Page) - no import() statements
+- Method signatures: async methodName(): Promise<returnType>
+- Import: import { test, expect, Page, Locator } from '@playwright/test';
+
+TEST COVERAGE REQUIREMENTS:
+- Individual field validation (positive/negative cases)
+- Cross-field validation scenarios
+- Form submission behavior testing
+- Error message verification with exact text matching
+- Success flow validation
+- Edge case handling (empty, boundary values, special characters)
+- Data-driven test scenarios using test.each or similar patterns
+
+MODERN PLAYWRIGHT PATTERNS:
+- Use page.locator() exclusively for element selection
+- Use expect().toBeVisible(), expect().toHaveText() for assertions
+- Use page.fill() for input interactions
+- Use page.click() for button interactions
+- Implement proper wait strategies with expect() assertions
+- Use test.beforeEach for consistent test setup
+
+FORBIDDEN PATTERNS:
+- waitForSelector() or other deprecated wait methods
+- jQuery-style selectors without page.locator()
+- Hardcoded delays or timeouts
+- Non-TypeScript syntax (var, function declarations, etc.)
+- Comments explaining code structure
+- Any text outside TypeScript code blocks
+- import('...') dynamic imports in type declarations
+- any type for Page or Locator objects
+- ElementHandle types (use Locator instead)
+
+OUTPUT REQUIREMENTS:
+1. Start with: import { test, expect, Page, Locator } from '@playwright/test';
+2. Define interfaces for test data
+3. Implement Page Object Model class with proper Page and Locator typing
+4. Create test data constants
+5. Write comprehensive test suite with multiple describe blocks
+6. End with complete test scenarios`,
 
     buildPrompt: (formAnalysis, testUrl, framework, options = {}) => {
       const businessContext = formAnalysis.businessContext || {};
@@ -78,48 +127,88 @@ REQUIRED FORMAT:
       const acceptanceCriteria =
         businessContext.criteria || formAnalysis.acceptanceCriteria || "";
 
-      return `Generate ${framework} test code using MODERN Playwright practices:
+      // Extract relevant fields from form analysis
+      const relevantFields = formAnalysis.relevantFields || [];
+      const formFields = formAnalysis.formFields || [];
+
+      // Build field information for prompt
+      const fieldInfo = formFields
+        .filter(
+          (field) =>
+            relevantFields.includes(field.name) || relevantFields.length === 0
+        )
+        .map(
+          (field) =>
+            `${field.name}: ${field.type} (selector: ${field.selector}, required: ${field.required})`
+        )
+        .join("\n");
+
+      return `Generate production-ready TypeScript Playwright test automation code for comprehensive form validation testing.
 
 BUSINESS CONTEXT:
-${description ? `Description: ${description}` : ""}
-${acceptanceCriteria ? `Acceptance Criteria: ${acceptanceCriteria}` : ""}
+Purpose: ${description}
+Acceptance Criteria: ${acceptanceCriteria}
 
-Form Analysis: ${JSON.stringify(formAnalysis, null, 2)}
-Test URL: ${testUrl}
+FORM FIELDS TO TEST:
+${fieldInfo}
 
-IMPORTANT: Focus ONLY on the fields and validation rules mentioned in the business context above. 
-Do NOT generate tests for fields that are not relevant to the specific requirements.
+TEST TARGET URL: ${testUrl}
 
-MODERN PLAYWRIGHT PATTERNS TO USE:
-1. const element = page.locator('#selector'); // NOT waitForSelector
-2. await element.fill(value); // For input fields
-3. await element.fill(''); // To clear inputs
-4. await expect(element).toBeVisible(); // For error messages
-5. await expect(element).not.toBeVisible(); // For hidden elements
-6. await expect(element).toHaveAttribute('required'); // For attributes
+VALIDATION BEHAVIOR SPECIFICATION:
+- Error messages display as red text below invalid fields with selector pattern: #fieldname-error
+- Validation triggers on form submission and field blur events
+- Multiple simultaneous validation errors are supported
+- Global form error appears when validation fails: "Please fix the errors above before submitting"
+- Form submission is prevented when validation errors exist
+- Successful form submission occurs when all validations pass
+- Client-side validation provides immediate feedback
+- Server-side validation may provide additional error handling
 
-TEST SCENARIOS TO INCLUDE (ONLY for relevant fields):
-1. Valid input scenarios (boundary values like exactly minimum age)
-2. Invalid input scenarios (below minimum requirements)
-3. Required field validation (empty inputs)
-4. Error message verification
-5. Success scenarios with ONLY the required fields
+REQUIRED TEST DELIVERABLES:
 
-CRITICAL REQUIREMENTS:
-- Use page.locator() for ALL element selection
-- Calculate dates properly (e.g., 16 years ago from today for age validation)
-- Test error messages using element visibility checks
-- Handle form submission properly
-- Use descriptive test names that match the business requirements
-- ONLY test fields that are relevant to the business context provided
-- If only DOB validation is mentioned, do NOT test email/mobile fields
+1. TYPESCRIPT INTERFACES:
+   - FormData interface defining all form field types
+   - ValidationError interface for error message structure
+   - TestScenario interface for data-driven test cases
 
-Example patterns:
-- const dobInput = page.locator('#dob');
-- const errorMessage = page.locator('#dob-error');
-- await expect(errorMessage).toBeVisible();
+2. PAGE OBJECT MODEL CLASS:
+   - TypeScript class with proper typing
+   - All form field locators as readonly properties
+   - Typed methods for form interactions (fill, clear, submit)
+   - Validation checking methods with boolean return types
+   - Error message retrieval methods
+   - Form state checking methods
 
-Output pure JavaScript code only. No explanations.`;
+3. TEST DATA MANAGEMENT:
+   - Valid form data constants with proper typing
+   - Invalid data scenarios with expected error messages
+   - Edge case test data (boundary values, special characters)
+   - Data-driven test scenarios using arrays or test.each patterns
+
+4. COMPREHENSIVE TEST SUITE:
+   - Individual field validation tests (positive/negative)
+   - Multi-field validation combination tests
+   - Form submission behavior tests
+   - Error message accuracy verification
+   - Success flow validation
+   - Cross-browser compatibility considerations
+
+5. TEST ORGANIZATION:
+   - Multiple test.describe blocks for logical grouping
+   - test.beforeEach for consistent page setup
+   - Clear, descriptive test names following AAA pattern
+   - Proper test isolation and cleanup
+
+TECHNICAL SPECIFICATIONS:
+- Use TypeScript with strict typing
+- Implement async/await patterns throughout
+- Use page.locator() for all element interactions
+- Use expect().toBeVisible(), expect().toHaveText() for assertions
+- Include proper error handling with try/catch where appropriate
+- Follow Page Object Model best practices for maintainability
+
+EXPECTED OUTPUT FORMAT:
+TypeScript code starting with imports, followed by interfaces, Page Object Model class, test data, and comprehensive test suite. No explanations or comments - only executable code.`;
     },
 
     temperature: 0.1,

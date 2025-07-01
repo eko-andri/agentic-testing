@@ -14,6 +14,7 @@ const {
 const { PROMPTS } = require("./prompts");
 const LiveUIAnalyzer = require("./liveUIAnalyzer"); // ADD LIVE UI ANALYZER
 const { ContextFilterAgent } = require("./contextFilterAgent"); // ADD CONTEXT FILTER AGENT
+const TestAnalysisAgent = require("./testAnalysisAgent"); // ADD TEST ANALYSIS AGENT
 const axios = require("axios"); // Add axios for fetching HTML
 
 const runner = new TestRunner();
@@ -69,12 +70,14 @@ class Orchestrator {
       provider: this.config.defaultProvider,
       model: this.config.defaultModel,
     });
+    this.testAnalysisAgent = new TestAnalysisAgent(); // NEW: Add Test Analysis Agent
 
     console.log(
       `[Orchestrator] Initialized with provider: ${this.config.defaultProvider}`
     );
     console.log(`[Orchestrator] Default model: ${this.config.defaultModel}`);
     console.log(`[Orchestrator] Context Filter Agent initialized`);
+    console.log(`[Orchestrator] Test Analysis Agent initialized`);
   }
 
   // =============================================================================
@@ -544,7 +547,7 @@ class Orchestrator {
   // =============================================================================
 
   /**
-   * Main pipeline execution
+   * Main pipeline execution with smart test analysis
    */
   async run() {
     resetProgress();
@@ -553,6 +556,9 @@ class Orchestrator {
     if (this.skipIfDisabled("formAnalyzer")) {
       return this.skipResult("Form Analyzer");
     }
+
+    // Initialize Test Analysis Agent
+    await this.testAnalysisAgent.initialize();
 
     // Choose analysis method based on user preference
     let formContext;
@@ -619,6 +625,82 @@ class Orchestrator {
       return this.skipResult("Test Generator", { formContext });
     }
 
+    // NEW: Smart Test Analysis - Analyze context and create intelligent test plan
+    updateProgress({
+      status: "🧠 Test Analysis Agent\nAnalyzing context and planning tests...",
+    });
+
+    try {
+      const analysisResult = await this.testAnalysisAgent.analyzeContext(
+        this.description,
+        this.acceptanceCriteria,
+        formContext.formFields
+      );
+
+      updateProgress({
+        status: "🧠 Test Analysis Agent\nExecuting intelligent test plan...",
+        prompt: `Found ${analysisResult.relevantFields.length} relevant fields, ${analysisResult.similarContexts.length} similar contexts`,
+      });
+
+      // Execute the test plan
+      const executionResult = await this.testAnalysisAgent.executeTestPlan(
+        analysisResult.testPlan,
+        this.description,
+        this.acceptanceCriteria
+      );
+
+      updateProgress({
+        status: "✅ Test Analysis Agent\nSmart test generation complete",
+        prompt: `Created: ${executionResult.created.length} tests, Modified: ${executionResult.modified.length} tests`,
+      });
+
+      // If smart generation succeeded, return early
+      if (
+        executionResult.created.length > 0 ||
+        executionResult.modified.length > 0
+      ) {
+        const testSummary = {
+          code: `// Smart test generation completed
+// Created tests: ${executionResult.created.map((t) => t.filename).join(", ")}
+// Modified tests: ${executionResult.modified.map((t) => t.filename).join(", ")}
+// Tests are saved in respective core/ and business/ directories
+`,
+          metadata: {
+            analysisResult,
+            executionResult,
+            scenariosCount:
+              executionResult.created.length + executionResult.modified.length,
+            smartGeneration: true,
+          },
+          validationReport: {
+            isValid: executionResult.errors.length === 0,
+            issues: executionResult.errors,
+            warnings: [],
+          },
+        };
+
+        updateProgress({
+          status: "✅ Pipeline Complete\nSmart test generation successful!",
+          prompt: `Generated ${testSummary.metadata.scenariosCount} intelligent test files`,
+          playwrightCode: testSummary.code,
+        });
+
+        return testSummary;
+      }
+    } catch (error) {
+      console.warn(
+        "[Orchestrator] Smart test analysis failed, falling back to traditional generation:",
+        error.message
+      );
+
+      updateProgress({
+        status:
+          "⚠️ Test Analysis Agent\nFalling back to traditional generation...",
+        prompt: error.message,
+      });
+    }
+
+    // FALLBACK: Traditional test generation if smart analysis fails
     const testUrl = this.testUrl;
     const generationOptions = {
       framework: this.framework,
@@ -634,7 +716,7 @@ class Orchestrator {
 
     while (attempt <= 3) {
       updateProgress({
-        status: `🧪 Test Generation Attempt ${attempt} (Qwen2.5-coder)`,
+        status: `🧪 Test Generation Attempt ${attempt} (Traditional)`,
       });
 
       let testResult;
@@ -709,6 +791,25 @@ class Orchestrator {
 
         attempt++;
       }
+    }
+  }
+
+  /**
+   * Get test analysis summary
+   */
+  async getTestAnalysisSummary() {
+    if (!this.testAnalysisAgent) {
+      throw new Error("Test Analysis Agent not initialized");
+    }
+    return await this.testAnalysisAgent.getAnalysisSummary();
+  }
+
+  /**
+   * Cleanup resources
+   */
+  async cleanup() {
+    if (this.testAnalysisAgent) {
+      await this.testAnalysisAgent.close();
     }
   }
 
