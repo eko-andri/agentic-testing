@@ -1,0 +1,87 @@
+{
+  "timestamp": "2025-06-30T10:55:47.468Z",
+  "url": "http://127.0.0.1:5500/policy-form.html",
+  "title": "Policy Form Test",
+  "screenshot": "/Users/tigerlab/Documents/Projects/agentic-testing/server/screenshots/live-ui-analysis.png",
+  "structure": {
+    "url": "http://127.0.0.1:5500/policy-form.html",
+    "title": "Policy Form Test",
+    "forms": [
+      {
+        "index": 0,
+        "id": "policy-form",
+        "action": "http://127.0.0.1:5500/policy-form.html",
+        "method": "get",
+        "fields": [
+          {
+            "type": "date",
+            "name": "dob",
+            "id": "dob",
+            "required": true,
+            "placeholder": "",
+            "value": "",
+            "pattern": "",
+            "min": "",
+            "max": "",
+            "minlength": "",
+            "maxlength": "",
+            "selector": "#dob",
+            "label": "Date of Birth (DOB):",
+            "validationMessage": "Please fill out this field."
+          }
+        ],
+        "buttons": [
+          {
+            "type": "submit",
+            "text": "Submit",
+            "id": "",
+            "name": "",
+            "selector": "button"
+          }
+        ]
+      }
+    ],
+    "interactiveElements": [],
+    "validationRules": {},
+    "businessContext": {
+      "type": "policy-form",
+      "hasAgeValidation": true,
+      "hasContactInfo": false,
+      "hasPolicyTypes": false
+    }
+  },
+  "interactions": {
+    "formId": "policy-form",
+    "interactions": [
+      {
+        "field": "dob",
+        "type": "date",
+        "canFocus": true,
+        "canInput": false,
+        "hasValidation": true
+      }
+    ]
+  },
+  "recommendations": [
+    {
+      "type": "test-scenarios",
+      "form": "policy-form",
+      "scenarios": [
+        "Happy path - valid data submission",
+        "Validation testing - required fields",
+        "Validation testing - invalid formats",
+        "Edge cases - boundary values"
+      ]
+    },
+    {
+      "type": "age-validation",
+      "form": "policy-form",
+      "tests": [
+        "Test minimum age requirement (16+ years)",
+        "Test edge case - exactly 16 years old",
+        "Test invalid age - under minimum",
+        "Test future dates - invalid DOB"
+      ]
+    }
+  ]
+}

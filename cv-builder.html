@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KarirKu - CV Builder Indonesia</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        overflow-x: hidden;
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      .container {
+        display: flex;
+        width: 500vw;
+        height: 100vh;
+        transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .step {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        position: relative;
+        padding: 16px 0 24px 0;
+      }
+
+      .step-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border-radius: 24px;
+        padding: 40px;
+        max-width: 600px;
+        width: 100%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        transform: translateY(20px);
+        opacity: 0;
+        animation: fadeInUp 0.8s ease forwards;
+        padding: 20px 16px 24px 16px;
+        border-radius: 10px;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+
+      @keyframes fadeInUp {
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .step-header {
+        text-align: center;
+        margin-bottom: 30px;
+        margin-bottom: 12px;
+      }
+
+      .step-number {
+        display: inline-block;
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 24px;
+        margin: 0 auto 20px;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .step-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 10px;
+        font-size: 17px;
+        margin-bottom: 4px;
+      }
+
+      .step-subtitle {
+        color: #718096;
+        font-size: 16px;
+        line-height: 1.5;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+        margin-bottom: 10px;
+      }
+
+      .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #4a5568;
+        margin-bottom: 4px;
+      }
+
+      .form-input {
+        width: 100%;
+        padding: 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        background: white;
+        padding: 7px;
+        font-size: 13px;
+        border-radius: 6px;
+      }
+
+      .form-input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      .form-textarea {
+        min-height: 120px;
+        resize: vertical;
+        min-height: 60px;
+      }
+
+      .btn-primary {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 16px 32px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 100%;
+        margin-top: 20px;
+        position: relative;
+        overflow: hidden;
+        padding: 10px 4px;
+        font-size: 14px;
+        border-radius: 6px;
+        margin-top: 10px;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+      }
+
+      .btn-primary:active {
+        transform: translateY(0);
+      }
+
+      .experience-item {
+        background: #f7fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+        position: relative;
+        transition: all 0.3s ease;
+      }
+
+      .experience-item:hover {
+        border-color: #667eea;
+        transform: translateY(-2px);
+      }
+
+      .add-experience {
+        border: 2px dashed #cbd5e0;
+        background: transparent;
+        color: #718096;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .add-experience:hover {
+        border-color: #667eea;
+        color: #667eea;
+        background: rgba(102, 126, 234, 0.05);
+      }
+
+      .progress-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 4px;
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        transition: width 0.8s ease;
+        z-index: 1000;
+      }
+
+      .cv-preview {
+        background: white;
+        border-radius: 16px;
+        padding: 40px;
+        margin: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        max-width: 800px;
+        animation: slideInRight 1s ease;
+        padding: 20px 12px 24px 12px;
+        margin: 8px 0;
+        border-radius: 10px;
+        max-width: 96vw;
+      }
+
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      .cv-header {
+        text-align: center;
+        padding-bottom: 30px;
+        border-bottom: 2px solid #e2e8f0;
+        margin-bottom: 30px;
+      }
+
+      .cv-photo {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        margin: 0 auto 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 48px;
+        font-weight: bold;
+      }
+
+      .cv-name {
+        font-size: 32px;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 10px;
+      }
+
+      .cv-title {
+        color: #667eea;
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .cv-section {
+        margin-bottom: 30px;
+      }
+
+      .cv-section-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 15px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #667eea;
+      }
+
+      .cv-experience-item {
+        margin-bottom: 20px;
+        padding: 20px;
+        background: #f7fafc;
+        border-radius: 12px;
+        border-left: 4px solid #667eea;
+      }
+
+      .cv-job-title {
+        font-weight: 600;
+        color: #2d3748;
+        font-size: 18px;
+      }
+
+      .cv-company {
+        color: #667eea;
+        font-weight: 500;
+        margin-bottom: 5px;
+      }
+
+      .cv-duration {
+        color: #718096;
+        font-size: 14px;
+        margin-bottom: 10px;
+      }
+
+      .cv-description {
+        color: #4a5568;
+        line-height: 1.6;
+      }
+
+      .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+      }
+
+      .loading-overlay.show {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .loading-content {
+        text-align: center;
+      }
+
+      .loading-spinner {
+        width: 60px;
+        height: 60px;
+        border: 4px solid #e2e8f0;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .ai-magic {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 700;
+      }
+
+      .floating-elements {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        overflow: hidden;
+      }
+
+      .floating-circle {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        animation: float 6s ease-in-out infinite;
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0px);
+        }
+        50% {
+          transform: translateY(-20px);
+        }
+      }
+
+      .step-indicator {
+        position: fixed;
+        top: 50%;
+        right: 30px;
+        transform: translateY(-50%);
+        z-index: 100;
+      }
+
+      .step-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        margin: 10px 0;
+        transition: all 0.3s ease;
+      }
+
+      .step-dot.active {
+        background: white;
+        transform: scale(1.2);
+      }
+
+      .fresh-grad-option {
+        background: linear-gradient(45deg, #48bb78, #38a169);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        margin: 10px 0;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+        font-weight: 600;
+      }
+
+      .fresh-grad-option:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(72, 187, 120, 0.4);
+      }
+
+      .experienced-option {
+        background: linear-gradient(45deg, #ed8936, #dd6b20);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        margin: 10px 0;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+        font-weight: 600;
+      }
+
+      .experienced-option:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(237, 137, 54, 0.4);
+      }
+
+      @media (max-width: 600px) {
+        .container {
+          width: 500vw;
+          height: auto;
+          min-height: unset;
+        }
+        .step {
+          width: 100vw;
+          min-height: unset;
+          height: auto;
+          padding: 16px 0 24px 0;
+          align-items: center;
+          justify-content: center;
+        }
+        .step-card {
+          padding: 20px 16px 24px 16px;
+          border-radius: 10px;
+          max-width: 96vw;
+          width: 100%;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+          margin: 0 auto;
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+        .cv-preview {
+          padding: 20px 12px 24px 12px;
+          margin: 8px 0;
+          border-radius: 10px;
+          max-width: 96vw;
+        }
+        /* Pastikan tidak ada horizontal scroll */
+        html,
+        body {
+          overflow-x: hidden;
+        }
+        /* Perbaiki margin/padding elemen dalam */
+        .step-header {
+          margin-bottom: 12px;
+        }
+        .step-title {
+          font-size: 17px;
+          margin-bottom: 4px;
+        }
+        .step-number {
+          width: 32px;
+          height: 32px;
+          font-size: 14px;
+          margin-bottom: 10px;
+        }
+        .form-group {
+          margin-bottom: 10px;
+        }
+        .form-label {
+          margin-bottom: 4px;
+        }
+        .form-input,
+        .form-textarea {
+          padding: 7px;
+          font-size: 13px;
+          border-radius: 6px;
+        }
+        .form-textarea {
+          min-height: 60px;
+        }
+        .btn-primary {
+          padding: 10px 4px;
+          font-size: 14px;
+          border-radius: 6px;
+          margin-top: 10px;
+        }
+        .cv-header {
+          padding-bottom: 10px;
+          margin-bottom: 10px;
+        }
+        .cv-photo {
+          width: 45px;
+          height: 45px;
+          font-size: 18px;
+          margin-bottom: 8px;
+        }
+        .cv-name {
+          font-size: 15px;
+          margin-bottom: 4px;
+        }
+        .cv-section {
+          margin-bottom: 10px;
+        }
+        .cv-section-title {
+          font-size: 13px;
+          margin-bottom: 6px;
+          padding-bottom: 3px;
+        }
+        .cv-job-title {
+          font-size: 12px;
+        }
+        .cv-experience-item {
+          padding: 6px;
+          margin-bottom: 8px;
+        }
+        .progress-bar {
+          height: 2px;
+        }
+        .step-indicator {
+          right: 2px;
+          bottom: 10px;
+          top: auto;
+          transform: none;
+          display: flex;
+          flex-direction: row;
+          gap: 2px;
+        }
+        .step-dot {
+          width: 7px;
+          height: 7px;
+          margin: 0;
+        }
+        .floating-elements {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="progress-bar" id="progressBar"></div>
+
+    <div class="step-indicator">
+      <div class="step-dot active"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+    </div>
+
+    <div class="container" id="container">
+      <!-- Step 1: Sign Up -->
+      <div class="step">
+        <div class="floating-elements">
+          <div
+            class="floating-circle"
+            style="
+              width: 100px;
+              height: 100px;
+              top: 20%;
+              left: 10%;
+              animation-delay: 0s;
+            "
+          ></div>
+          <div
+            class="floating-circle"
+            style="
+              width: 60px;
+              height: 60px;
+              top: 60%;
+              right: 15%;
+              animation-delay: 2s;
+            "
+          ></div>
+          <div
+            class="floating-circle"
+            style="
+              width: 80px;
+              height: 80px;
+              bottom: 20%;
+              left: 20%;
+              animation-delay: 4s;
+            "
+          ></div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-header">
+            <div class="step-number">1</div>
+            <h2 class="step-title">
+              Selamat Datang di <span class="ai-magic">KarirKu</span>
+            </h2>
+            <p class="step-subtitle">
+              Buat CV yang menarik perhatian HR dalam hitungan menit dengan
+              bantuan AI
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nama Lengkap</label>
+            <input
+              type="text"
+              class="form-input"
+              placeholder="Masukkan nama lengkap Anda"
+              id="fullName"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input
+              type="email"
+              class="form-input"
+              placeholder="nama@email.com"
+              id="email"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tanggal Lahir</label>
+            <input type="date" class="form-input" id="dob" />
+          </div>
+
+          <button class="btn-primary" onclick="nextStep()">
+            Mulai Perjalanan Karir Saya →
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Experience Type -->
+      <div class="step">
+        <div class="step-card">
+          <div class="step-header">
+            <div class="step-number">2</div>
+            <h2 class="step-title">Ceritakan Pengalaman Anda</h2>
+            <p class="step-subtitle">
+              Pilih yang paling sesuai dengan kondisi Anda saat ini
+            </p>
+          </div>
+
+          <div
+            class="experienced-option"
+            onclick="selectExperienceType('experienced')"
+          >
+            <h3>🏢 Saya Punya Pengalaman Kerja</h3>
+            <p>Sudah pernah bekerja di perusahaan atau organisasi</p>
+          </div>
+
+          <div
+            class="fresh-grad-option"
+            onclick="selectExperienceType('fresh')"
+          >
+            <h3>🎓 Fresh Graduate / Belum Punya Pengalaman Kerja</h3>
+            <p>Baru lulus atau belum pernah bekerja secara profesional</p>
+          </div>
+
+          <button
+            class="btn-primary"
+            style="margin-top: 10px; background: #e2e8f0; color: #2d3748"
+            onclick="prevStep()"
+          >
+            ← Kembali
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 3: Experience Details -->
+      <div class="step">
+        <div class="step-card">
+          <div class="step-header">
+            <div class="step-number">3</div>
+            <h2 class="step-title" id="experienceTitle">
+              Pengalaman Kerja Anda
+            </h2>
+            <p class="step-subtitle" id="experienceSubtitle">
+              Ceritakan pengalaman kerja Anda dengan santai
+            </p>
+          </div>
+
+          <div id="experienceContainer">
+            <div class="experience-item">
+              <div class="form-group">
+                <label class="form-label">Nama Perusahaan/Organisasi</label>
+                <input
+                  type="text"
+                  class="form-input"
+                  placeholder="PT. Maju Bersama"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Posisi/Jabatan</label>
+                <input
+                  type="text"
+                  class="form-input"
+                  placeholder="Marketing Executive"
+                />
+              </div>
+
+              <div style="display: flex; gap: 15px">
+                <div class="form-group" style="flex: 1">
+                  <label class="form-label">Mulai Kerja</label>
+                  <input type="month" class="form-input" />
+                </div>
+                <div class="form-group" style="flex: 1">
+                  <label class="form-label">Selesai Kerja</label>
+                  <input type="month" class="form-input" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label"
+                  >Apa yang biasa Anda kerjakan sehari-hari?</label
+                >
+                <textarea
+                  class="form-input form-textarea"
+                  placeholder="Ceritakan aktivitas sehari-hari Anda di tempat kerja ini. Misalnya: buat konten social media, meeting dengan klien, analisis data penjualan, dll. Tidak perlu formal, tulis saja seperti cerita ke teman."
+                ></textarea>
+              </div>
+            </div>
+
+            <div
+              class="experience-item add-experience"
+              onclick="addExperience()"
+            >
+              <span>+ Tambah Pengalaman Lain</span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 20px">
+            <button
+              class="btn-primary"
+              style="background: #e2e8f0; color: #2d3748; width: auto"
+              onclick="prevStep()"
+            >
+              ← Kembali
+            </button>
+            <button class="btn-primary" onclick="nextStep()">
+              Lanjutkan →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Target Job -->
+      <div class="step">
+        <div class="step-card">
+          <div class="step-header">
+            <div class="step-number">4</div>
+            <h2 class="step-title">Mau Melamar Kemana?</h2>
+            <p class="step-subtitle">
+              Beritahu kami perusahaan dan posisi yang Anda inginkan
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nama Perusahaan yang Dituju</label>
+            <input
+              type="text"
+              class="form-input"
+              placeholder="Contoh: PT. Tokopedia, Gojek, Bank BCA, dll"
+              id="targetCompany"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Posisi yang Dilamar</label>
+            <input
+              type="text"
+              class="form-input"
+              placeholder="Contoh: Digital Marketing Specialist, Software Engineer, dll"
+              id="targetPosition"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label"
+              >Mengapa Anda tertarik dengan perusahaan ini? (Opsional)</label
+            >
+            <textarea
+              class="form-input form-textarea"
+              placeholder="Ceritakan alasan Anda ingin bekerja di perusahaan ini. Ini akan membantu AI membuat surat lamaran yang lebih personal."
+            ></textarea>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 20px">
+            <button
+              class="btn-primary"
+              style="background: #e2e8f0; color: #2d3748; width: auto"
+              onclick="prevStep()"
+            >
+              ← Kembali
+            </button>
+            <button class="btn-primary" onclick="generateCV()">
+              <span class="ai-magic">✨ Buat CV & Surat Lamaran Saya</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5: CV Preview -->
+      <div class="step">
+        <div class="cv-preview">
+          <div class="cv-header">
+            <div class="cv-photo" id="cvPhoto">JD</div>
+            <div class="cv-name" id="cvName">John Doe</div>
+            <div class="cv-title" id="cvPosition">
+              Digital Marketing Specialist
+            </div>
+            <div style="margin-top: 15px; color: #718096">
+              <span id="cvEmail">john.doe@email.com</span> •
+              <span id="cvAge">25 tahun</span>
+            </div>
+          </div>
+
+          <div class="cv-section">
+            <h3 class="cv-section-title">Profil Profesional</h3>
+            <p id="cvProfile" style="color: #4a5568; line-height: 1.6">
+              Marketing professional dengan pengalaman dalam digital marketing
+              dan brand management. Memiliki kemampuan analitis yang kuat dan
+              passionate dalam mengembangkan strategi pemasaran yang inovatif.
+            </p>
+          </div>
+
+          <div class="cv-section">
+            <h3 class="cv-section-title">Pengalaman Kerja</h3>
+            <div id="cvExperiences">
+              <div class="cv-experience-item">
+                <div class="cv-job-title">Marketing Executive</div>
+                <div class="cv-company">PT. Maju Bersama</div>
+                <div class="cv-duration">Januari 2022 - Desember 2023</div>
+                <div class="cv-description">
+                  • Mengembangkan dan mengelola strategi pemasaran digital untuk
+                  meningkatkan brand awareness<br />
+                  • Mengelola kampanye social media yang menghasilkan
+                  peningkatan engagement rate sebesar 35%<br />
+                  • Menganalisis data penjualan dan tren pasar untuk optimasi
+                  strategi marketing<br />
+                  • Berkolaborasi dengan tim kreatif dalam pembuatan konten
+                  pemasaran yang menarik
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cv-section">
+            <h3 class="cv-section-title">Keterampilan</h3>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px">
+              <span
+                style="
+                  background: #667eea;
+                  color: white;
+                  padding: 8px 16px;
+                  border-radius: 20px;
+                  font-size: 14px;
+                "
+                >Digital Marketing</span
+              >
+              <span
+                style="
+                  background: #667eea;
+                  color: white;
+                  padding: 8px 16px;
+                  border-radius: 20px;
+                  font-size: 14px;
+                "
+                >Social Media Management</span
+              >
+              <span
+                style="
+                  background: #667eea;
+                  color: white;
+                  padding: 8px 16px;
+                  border-radius: 20px;
+                  font-size: 14px;
+                "
+                >Data Analysis</span
+              >
+              <span
+                style="
+                  background: #667eea;
+                  color: white;
+                  padding: 8px 16px;
+                  border-radius: 20px;
+                  font-size: 14px;
+                "
+                >Content Creation</span
+              >
+            </div>
+          </div>
+
+          <div style="margin-top: 40px; text-align: center">
+            <button
+              class="btn-primary"
+              onclick="showCoverLetter()"
+              style="width: auto; padding: 16px 32px; margin-right: 15px"
+            >
+              Lihat Surat Lamaran →
+            </button>
+            <button
+              class="btn-primary"
+              onclick="downloadCV()"
+              style="width: auto; padding: 16px 32px; background: #48bb78"
+            >
+              Download CV
+            </button>
+            <button
+              class="btn-primary"
+              style="
+                width: auto;
+                padding: 16px 32px;
+                background: #e2e8f0;
+                color: #2d3748;
+                margin-left: 15px;
+              "
+              onclick="prevStep()"
+            >
+              ← Kembali
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <h3 style="color: #2d3748; margin-bottom: 10px">
+          <span class="ai-magic">AI sedang bekerja...</span>
+        </h3>
+        <p style="color: #718096">
+          Menganalisis pengalaman Anda dan membuat CV yang menarik
+        </p>
+      </div>
+    </div>
+
+    <script>
+      let currentStep = 0;
+      let experienceType = "";
+      let userData = {};
+
+      function nextStep() {
+        if (currentStep < 4) {
+          currentStep++;
+          updateContainer();
+          updateProgressBar();
+          updateStepIndicator();
+        }
+      }
+
+      function prevStep() {
+        if (currentStep > 0) {
+          currentStep--;
+          updateContainer();
+          updateProgressBar();
+          updateStepIndicator();
+        }
+      }
+
+      function updateContainer() {
+        const container = document.getElementById("container");
+        container.style.transform = `translateX(-${currentStep * 100}vw)`;
+      }
+
+      function updateProgressBar() {
+        const progressBar = document.getElementById("progressBar");
+        const progress = ((currentStep + 1) / 5) * 100;
+        progressBar.style.width = `${progress}%`;
+      }
+
+      function updateStepIndicator() {
+        const dots = document.querySelectorAll(".step-dot");
+        dots.forEach((dot, index) => {
+          dot.classList.toggle("active", index === currentStep);
+        });
+      }
+
+      function selectExperienceType(type) {
+        experienceType = type;
+
+        const title = document.getElementById("experienceTitle");
+        const subtitle = document.getElementById("experienceSubtitle");
+
+        if (type === "fresh") {
+          title.textContent = "Pengalaman Organisasi & Kegiatan";
+          subtitle.textContent =
+            "Ceritakan pengalaman Anda di organisasi, volunteer, atau kegiatan lainnya";
+
+          // Update form placeholder for fresh graduate
+          const container = document.getElementById("experienceContainer");
+          container.innerHTML = `
+                    <div class="experience-item">
+                        <div class="form-group">
+                            <label class="form-label">Nama Organisasi/Kegiatan</label>
+                            <input type="text" class="form-input" placeholder="Contoh: BEM Universitas, Komunitas Coding, Volunteer PMI">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Posisi/Peran</label>
+                            <input type="text" class="form-input" placeholder="Contoh: Ketua Divisi, Anggota Aktif, Volunteer">
+                        </div>
+                        
+                        <div style="display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label class="form-label">Mulai</label>
+                                <input type="month" class="form-input">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label class="form-label">Selesai</label>
+                                <input type="month" class="form-input">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Apa yang Anda lakukan di sana?</label>
+                            <textarea class="form-input form-textarea" placeholder="Ceritakan kegiatan Anda. Misalnya: koordinasi acara, buat proposal, presentasi ke sponsor, manage social media, dll. Tulis santai seperti cerita ke teman."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="experience-item add-experience" onclick="addExperience()">
+                        <span>+ Tambah Pengalaman Lain</span>
+                    </div>
+                `;
+        }
+
+        setTimeout(() => {
+          nextStep();
+        }, 500);
+      }
+
+      function addExperience() {
+        const container = document.getElementById("experienceContainer");
+        const addButton = container.querySelector(".add-experience");
+
+        const newExperience = document.createElement("div");
+        newExperience.className = "experience-item";
+        newExperience.innerHTML = `
+                <div class="form-group">
+                    <label class="form-label">${
+                      experienceType === "fresh"
+                        ? "Nama Organisasi/Kegiatan"
+                        : "Nama Perusahaan"
+                    }</label>
+                    <input type="text" class="form-input" placeholder="${
+                      experienceType === "fresh"
+                        ? "Contoh: BEM, Komunitas, Volunteer"
+                        : "PT. Nama Perusahaan"
+                    }">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Posisi/Peran</label>
+                    <input type="text" class="form-input" placeholder="${
+                      experienceType === "fresh"
+                        ? "Ketua, Anggota, Volunteer"
+                        : "Jabatan Anda"
+                    }">
+                </div>
+                
+                <div style="display: flex; gap: 15px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Mulai</label>
+                        <input type="month" class="form-input">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Selesai</label>
+                        <input type="month" class="form-input">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">${
+                      experienceType === "fresh"
+                        ? "Apa yang Anda lakukan di sana?"
+                        : "Aktivitas sehari-hari Anda?"
+                    }</label>
+                    <textarea class="form-input form-textarea" placeholder="Ceritakan aktivitas Anda..."></textarea>
+                </div>
+                
+                <button onclick="this.parentElement.remove()" style="position: absolute; top: 10px; right: 10px; background: #e53e3e; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">×</button>
+            `;
+
+        container.insertBefore(newExperience, addButton);
+      }
+
+      function generateCV() {
+        // Show loading
+        document.getElementById("loadingOverlay").classList.add("show");
+
+        // Collect user data
+        userData.fullName = document.getElementById("fullName").value;
+        userData.email = document.getElementById("email").value;
+        userData.dob = document.getElementById("dob").value;
+        userData.targetCompany = document.getElementById("targetCompany").value;
+        userData.targetPosition =
+          document.getElementById("targetPosition").value;
+
+        // Simulate AI processing
+        setTimeout(() => {
+          populateCV();
+          document.getElementById("loadingOverlay").classList.remove("show");
+          nextStep();
+        }, 3000);
+      }
+
+      function populateCV() {
+        // Update CV with user data
+        const initials = userData.fullName
+          .split(" ")
+          .map((name) => name[0])
+          .join("")
+          .toUpperCase();
+        document.getElementById("cvPhoto").textContent = initials;
+        document.getElementById("cvName").textContent = userData.fullName;
+        document.getElementById("cvPosition").textContent =
+          userData.targetPosition;
+        document.getElementById("cvEmail").textContent = userData.email;
+
+        // Calculate age
+        const birthDate = new Date(userData.dob);
+        const today = new Date();
+        const age = today.getFullYear() - birthDate.getFullYear();
+        document.getElementById("cvAge").textContent = `${age} tahun`;
+
+        // Update professional profile with AI-generated content
+        const aiProfile = generateAIProfessionalProfile();
+        document.getElementById("cvProfile").textContent = aiProfile;
+      }
+
+      function generateAIProfessionalProfile() {
+        const profiles = [
+          `Professional yang berpengalaman dengan kemampuan ${userData.targetPosition.toLowerCase()} yang solid. Memiliki track record yang baik dalam menyelesaikan proyek dan bekerja dalam tim. Passionate dalam mengembangkan karir di ${
+            userData.targetCompany
+          } dengan kontribusi yang maksimal.`,
+          `Individu yang motivated dengan background yang kuat di bidang ${userData.targetPosition.toLowerCase()}. Memiliki kemampuan analitis dan komunikasi yang baik, serta siap berkontribusi dalam mencapai target perusahaan di ${
+            userData.targetCompany
+          }.`,
+          `Professional yang detail-oriented dengan pengalaman dalam ${userData.targetPosition.toLowerCase()}. Memiliki kemampuan adaptasi yang tinggi dan selalu eager to learn. Tertarik untuk mengembangkan karir dan memberikan value terbaik untuk ${
+            userData.targetCompany
+          }.`,
+        ];
+
+        return profiles[Math.floor(Math.random() * profiles.length)];
+      }
+
+      function showCoverLetter() {
+        // Create cover letter modal
+        const modal = document.createElement("div");
+        modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 3000;
+                animation: fadeIn 0.3s ease;
+            `;
+
+        modal.innerHTML = `
+                <div style="background: white; border-radius: 16px; padding: 40px; max-width: 800px; max-height: 80vh; overflow-y: auto; margin: 20px; position: relative;">
+                    <button onclick="this.closest('div').parentElement.remove()" style="position: absolute; top: 15px; right: 15px; background: #e53e3e; color: white; border: none; border-radius: 50%; width: 35px; height: 35px; cursor: pointer; font-size: 18px;">×</button>
+                    
+                    <h2 style="color: #2d3748; margin-bottom: 30px; text-align: center;">Surat Lamaran Kerja</h2>
+                    
+                    <div style="line-height: 1.8; color: #4a5568;">
+                        <p style="margin-bottom: 20px;">
+                            <strong>Kepada Yth.</strong><br>
+                            HRD ${userData.targetCompany}<br>
+                            Di tempat
+                        </p>
+                        
+                        <p style="margin-bottom: 20px;">
+                            <strong>Hal: Lamaran Kerja - ${
+                              userData.targetPosition
+                            }</strong>
+                        </p>
+                        
+                        <p style="margin-bottom: 20px;">Dengan hormat,</p>
+                        
+                        <p style="margin-bottom: 20px;">
+                            Saya yang bertanda tangan di bawah ini:
+                        </p>
+                        
+                        <div style="margin-left: 40px; margin-bottom: 20px;">
+                            <p>Nama: <strong>${userData.fullName}</strong></p>
+                            <p>Email: <strong>${userData.email}</strong></p>
+                            <p>Umur: <strong>${
+                              new Date().getFullYear() -
+                              new Date(userData.dob).getFullYear()
+                            } tahun</strong></p>
+                        </div>
+                        
+                        <p style="margin-bottom: 20px;">
+                            Melalui surat ini, saya ingin mengajukan lamaran kerja untuk posisi <strong>${
+                              userData.targetPosition
+                            }</strong> di perusahaan yang Bapak/Ibu pimpin.
+                        </p>
+                        
+                        <p style="margin-bottom: 20px;">
+                            Saya sangat tertarik untuk bergabung dengan ${
+                              userData.targetCompany
+                            } karena reputasinya sebagai perusahaan yang inovatif dan berkembang pesat. Dengan latar belakang dan pengalaman yang saya miliki, saya yakin dapat memberikan kontribusi positif bagi kemajuan perusahaan.
+                        </p>
+                        
+                        <p style="margin-bottom: 20px;">
+                            Saya memiliki kemampuan yang sesuai dengan posisi ${
+                              userData.targetPosition
+                            }, termasuk kemampuan analitis yang baik, komunikasi yang efektif, dan semangat untuk terus belajar dan berkembang. Saya juga memiliki pengalaman dalam bekerja secara tim dan mencapai target yang telah ditetapkan.
+                        </p>
+                        
+                        <p style="margin-bottom: 20px;">
+                            Sebagai bahan pertimbangan, saya lampirkan CV yang berisi informasi lengkap mengenai data diri, pengalaman, dan kualifikasi saya.
+                        </p>
+                        
+                        <p style="margin-bottom: 20px;">
+                            Demikian surat lamaran ini saya buat dengan sebenar-benarnya. Saya berharap dapat diberikan kesempatan untuk mengikuti proses seleksi dan wawancara kerja. Atas perhatian dan kesempatan yang diberikan, saya ucapkan terima kasih.
+                        </p>
+                        
+                        <p style="margin-bottom: 40px;">
+                            Hormat saya,<br><br><br>
+                            <strong>${userData.fullName}</strong>
+                        </p>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <button class="btn-primary" onclick="copyCoverLetter()" style="width: auto; padding: 16px 32px;">
+                            📋 Copy Surat Lamaran
+                        </button>
+                    </div>
+                </div>
+            `;
+
+        document.body.appendChild(modal);
+      }
+
+      function copyCoverLetter() {
+        const coverLetterText = `
+Kepada Yth.
+HRD ${userData.targetCompany}
+Di tempat
+
+Hal: Lamaran Kerja - ${userData.targetPosition}
+
+Dengan hormat,
+
+Saya yang bertanda tangan di bawah ini:
+
+Nama: ${userData.fullName}
+Email: ${userData.email}
+Umur: ${new Date().getFullYear() - new Date(userData.dob).getFullYear()} tahun
+
+Melalui surat ini, saya ingin mengajukan lamaran kerja untuk posisi ${
+          userData.targetPosition
+        } di perusahaan yang Bapak/Ibu pimpin.
+
+Saya sangat tertarik untuk bergabung dengan ${
+          userData.targetCompany
+        } karena reputasinya sebagai perusahaan yang inovatif dan berkembang pesat. Dengan latar belakang dan pengalaman yang saya miliki, saya yakin dapat memberikan kontribusi positif bagi kemajuan perusahaan.
+
+Saya memiliki kemampuan yang sesuai dengan posisi ${
+          userData.targetPosition
+        }, termasuk kemampuan analitis yang baik, komunikasi yang efektif, dan semangat untuk terus belajar dan berkembang. Saya juga memiliki pengalaman dalam bekerja secara tim dan mencapai target yang telah ditetapkan.
+
+Sebagai bahan pertimbangan, saya lampirkan CV yang berisi informasi lengkap mengenai data diri, pengalaman, dan kualifikasi saya.
+
+Demikian surat lamaran ini saya buat dengan sebenar-benarnya. Saya berharap dapat diberikan kesempatan untuk mengikuti proses seleksi dan wawancara kerja. Atas perhatian dan kesempatan yang diberikan, saya ucapkan terima kasih.
+
+Hormat saya,
+
+
+${userData.fullName}
+            `;
+
+        navigator.clipboard
+          .writeText(coverLetterText)
+          .then(() => {
+            alert(
+              "Surat lamaran berhasil di-copy! Anda bisa paste ke Word atau aplikasi lainnya."
+            );
+          })
+          .catch(() => {
+            // Fallback for older browsers
+            const textArea = document.createElement("textarea");
+            textArea.value = coverLetterText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            alert("Surat lamaran berhasil di-copy!");
+          });
+      }
+
+      function downloadCV() {
+        // Simulate CV download
+        alert(
+          "Fitur download akan segera tersedia! Untuk sementara, Anda bisa screenshot CV ini atau print halaman ini."
+        );
+
+        // In real implementation, this would generate PDF
+        // window.print();
+      }
+
+      // Initialize progress bar
+      updateProgressBar();
+
+      // Add some interactive animations
+      document.addEventListener("DOMContentLoaded", function () {
+        // Animate form inputs on focus
+        const inputs = document.querySelectorAll(".form-input");
+        inputs.forEach((input) => {
+          input.addEventListener("focus", function () {
+            this.style.transform = "scale(1.02)";
+          });
+
+          input.addEventListener("blur", function () {
+            this.style.transform = "scale(1)";
+          });
+        });
+
+        // Add typing effect to step titles
+        const stepTitles = document.querySelectorAll(".step-title");
+        stepTitles.forEach((title, index) => {
+          if (index === 0) {
+            // Only for first title initially
+            typeWriter(title, title.textContent, 50);
+          }
+        });
+      });
+
+      function typeWriter(element, text, speed) {
+        element.textContent = "";
+        let i = 0;
+
+        function typing() {
+          if (i < text.length) {
+            element.textContent += text.charAt(i);
+            i++;
+            setTimeout(typing, speed);
+          }
+        }
+
+        typing();
+      }
+
+      // Add smooth scroll animations when moving between steps
+      function smoothStepTransition() {
+        const container = document.getElementById("container");
+        container.style.transform = `translateX(-${currentStep * 100}vw)`;
+
+        // Add slight bounce effect
+        setTimeout(() => {
+          container.style.transform = `translateX(-${
+            currentStep * 100
+          }vw) scale(1.01)`;
+        }, 300);
+
+        setTimeout(() => {
+          container.style.transform = `translateX(-${
+            currentStep * 100
+          }vw) scale(1)`;
+        }, 400);
+      }
+    </script>
+  </body>
+</html>

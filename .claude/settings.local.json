@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(node:*)",
+      "Bash(mkdir:*)",
+      "Bash(ls:*)",
+      "Bash(env)",
+      "Bash(source .env)",
+      "Bash(export LLM_PROVIDER=bedrock)",
+      "Bash(grep:*)",
+      "Bash(curl:*)",
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(timeout:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx playwright test:*)"
+    ],
+    "deny": []
+  }
+}

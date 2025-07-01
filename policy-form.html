@@ -15,8 +15,7 @@
         padding: 2rem 1.5rem;
         border-radius: 12px;
         box-shadow: 0 4px 24px rgba(44, 62, 80, 0.08);
-      "
-    >
+      ">
       <h2>Policy Form (Test DOB)</h2>
       <form id="policy-form" novalidate>
         <div class="field-group">
@@ -25,8 +24,35 @@
           <div
             id="dob-error"
             class="error-message"
-            style="margin-top: 0.25rem; color: #e53935"
-          ></div>
+            style="margin-top: 0.25rem; color: #e53935"></div>
+        </div>
+
+        <div class="field-group">
+          <label for="email">Email Address:</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            required
+            placeholder="example@domain.com" />
+          <div
+            id="email-error"
+            class="error-message"
+            style="margin-top: 0.25rem; color: #e53935"></div>
+        </div>
+
+        <div class="field-group">
+          <label for="mobile">Mobile Number:</label>
+          <input
+            type="tel"
+            id="mobile"
+            name="mobile"
+            required
+            placeholder="0812-3456-7890" />
+          <div
+            id="mobile-error"
+            class="error-message"
+            style="margin-top: 0.25rem; color: #e53935"></div>
         </div>
         <button type="submit">Submit</button>
         <div id="form-message" style="margin-top: 1rem"></div>
@@ -39,13 +65,25 @@
       dobInput.addEventListener("input", validateDOB);
       dobInput.addEventListener("change", validateDOB);
 
+      // --- Real-time validation for Email field ---
+      const emailInput = document.getElementById("email");
+      const emailError = document.getElementById("email-error");
+      emailInput.addEventListener("input", validateEmail);
+      emailInput.addEventListener("blur", validateEmail);
+
+      // --- Real-time validation for Mobile field ---
+      const mobileInput = document.getElementById("mobile");
+      const mobileError = document.getElementById("mobile-error");
+      mobileInput.addEventListener("input", validateMobile);
+      mobileInput.addEventListener("blur", validateMobile);
+
       function validateDOB() {
         const dob = dobInput.value;
         dobError.textContent = "";
         dobError.className = "error-message";
         if (!dob) {
           dobError.textContent = "DOB field is required and cannot be empty.";
-          return;
+          return false;
         }
         const dobDate = new Date(dob);
         const now = new Date();
@@ -56,26 +94,113 @@
         }
         if (isNaN(dobDate.getTime())) {
           dobError.textContent = "DOB field must accept only dates.";
-          return;
+          return false;
         }
         if (age < 16) {
           dobError.textContent = "Minimum age requirement not met.";
-          return;
+          return false;
         }
         // If valid, clear error
         dobError.textContent = "";
+        return true;
+      }
+
+      function validateEmail() {
+        const email = emailInput.value.trim();
+        emailError.textContent = "";
+        emailError.className = "error-message";
+
+        if (!email) {
+          emailError.textContent =
+            "Email field is required and cannot be empty.";
+          return false;
+        }
+
+        // Email regex pattern for validation
+        const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+        if (!emailPattern.test(email)) {
+          emailError.textContent =
+            "Please enter a valid email address (e.g., user@domain.com).";
+          return false;
+        }
+
+        if (email.length > 100) {
+          emailError.textContent =
+            "Email address must be less than 100 characters.";
+          return false;
+        }
+
+        // If valid, clear error
+        emailError.textContent = "";
+        return true;
+      }
+
+      function validateMobile() {
+        const mobile = mobileInput.value.trim();
+        mobileError.textContent = "";
+        mobileError.className = "error-message";
+
+        if (!mobile) {
+          mobileError.textContent =
+            "Mobile number field is required and cannot be empty.";
+          return false;
+        }
+
+        // Remove all non-digit characters for validation
+        const digitsOnly = mobile.replace(/\D/g, "");
+
+        // Check if starts with 0 (Indonesian format) or country code
+        if (
+          !digitsOnly.match(
+            /^(0[8][0-9]{8,11}|62[8][0-9]{8,11}|\+62[8][0-9]{8,11})$/
+          )
+        ) {
+          mobileError.textContent =
+            "Please enter a valid Indonesian mobile number (e.g., 0812-3456-7890).";
+          return false;
+        }
+
+        if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+          mobileError.textContent =
+            "Mobile number must be between 10-15 digits.";
+          return false;
+        }
+
+        // If valid, clear error
+        mobileError.textContent = "";
+        return true;
       }
 
       document
         .getElementById("policy-form")
         .addEventListener("submit", function (e) {
           e.preventDefault();
-          validateDOB();
-          if (dobError.textContent) return;
+
+          // Validate all fields
+          const isDOBValid = validateDOB();
+          const isEmailValid = validateEmail();
+          const isMobileValid = validateMobile();
+
+          // Check if any field has errors
+          if (!isDOBValid || !isEmailValid || !isMobileValid) {
+            const msg = document.getElementById("form-message");
+            msg.textContent = "Please fix the errors above before submitting.";
+            msg.style.color = "#e53935";
+            return;
+          }
+
+          // All fields are valid
           const dob = document.getElementById("dob").value;
+          const email = document.getElementById("email").value;
+          const mobile = document.getElementById("mobile").value;
           const msg = document.getElementById("form-message");
-          msg.textContent = "Form submitted successfully.";
-          msg.className = "success-message";
+          msg.textContent =
+            "Form submitted successfully with all fields validated.";
+          msg.style.color = "#2e7d32";
+
+          // Log form data for testing purposes
+          console.log("Form Data:", { dob, email, mobile });
         });
     </script>
   </body>

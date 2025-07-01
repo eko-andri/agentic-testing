@@ -1,10 +1,13 @@
 {
-  "name": "server",
-  "version": "1.0.0",
-  "description": "",
+  "name": "agentic-testing-server",
+  "version": "2.0.0",
+  "description": "Consolidated Agentic Testing Server with Qwen2.5-coder optimization",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon e2e-server.js --ignore tests/",
+    "start": "node index.js",
+    "dev": "nodemon index.js --ignore tests/",
+    "dev:qwen": "LLM_PROVIDER=ollama LLM_MODEL=qwen2.5-coder:7b nodemon index.js --ignore tests/",
+    "dev:bedrock": "LLM_PROVIDER=bedrock nodemon index.js --ignore tests/",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -21,7 +24,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "fs-extra": "^11.3.0"
+    "fs-extra": "^11.3.0",
+    "puppeteer": "^24.11.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",

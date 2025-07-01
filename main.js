@@ -12,17 +12,13 @@ document
       howToReproduce: document.getElementById("how-to-reproduce").value,
       acceptanceCriteria: document.getElementById("acceptance-criteria").value,
       testUrl: document.getElementById("test-url").value,
+      analysisMethod: document.querySelector(
+        'input[name="analysisMethod"]:checked'
+      ).value,
       extras: extras,
     };
     window.lastFormData = formData;
-    // Reset lastPrompts agar agent berikutnya bisa update prompt baru
-    window.lastPrompts = {
-      promptEngineer:
-        formData.description +
-        (formData.acceptanceCriteria ? "\n" + formData.acceptanceCriteria : ""),
-      criticAgent: "",
-      testGenerator: "",
-    };
+
     const responseContainer = document.getElementById("response-container");
     const responsePlaceholder = document.getElementById("response-placeholder");
     responsePlaceholder.textContent = "Processing...";
@@ -30,87 +26,52 @@ document
     console.log("Submitting form data:", formData);
 
     try {
-      const response = await fetch("http://localhost:3333/api/run-e2e", {
+      const response = await fetch("http://localhost:3333/api/generate-test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
       const result = await response.json();
-      // Simpan prompt terakhir untuk setiap agent
-      if (result.success) {
-        if (result.testPlan) {
-          window.lastPrompts.promptEngineer =
-            formData.description +
-            (formData.acceptanceCriteria
-              ? "\n" + formData.acceptanceCriteria
-              : "");
-        }
-        if (result.testPlanFeedback) {
-          window.lastPrompts.criticAgent = result.testPlan;
-        }
-        if (result.playwrightCode) {
-          window.lastPrompts.testGenerator = result.testPlan;
-        }
-      }
-      // Simpan prompt terakhir untuk setiap agent
-      let lastPrompts = {
-        promptEngineer: "",
-        criticAgent: "",
-        testGenerator: "",
-      };
+
+      // Handle new API response structure
       if (result.success) {
         let html = "";
-        if (result.testPlan) {
-          lastPrompts.promptEngineer =
-            formData.description +
-            (formData.acceptanceCriteria
-              ? "\n" + formData.acceptanceCriteria
-              : "");
-          html += `<div style='font-weight:600;margin-bottom:0.5em;'>Agent of Prompt Engineer Agent Output:</div>`;
-          html += result.testPlan
-            .split("\n")
-            .map((line) => `<p>${line}</p>`)
-            .join("");
+
+        // Check if we have result data
+        if (result.result) {
+          if (result.result.formAnalysis) {
+            html += `<div style='font-weight:600;margin-bottom:0.5em;'>Form Analysis:</div>`;
+            html += `<pre style='background:#f4f4f4;padding:0.7em;border-radius:6px;white-space:pre-wrap;font-size:0.92em;font-family:inherit;'>${JSON.stringify(
+              result.result.formAnalysis,
+              null,
+              2
+            )}</pre>`;
+          }
+
+          if (result.result.testCode) {
+            html += `<div style='font-weight:600;margin:1em 0 0.5em 0;'>Generated Test Code:</div>`;
+            html += `<pre style="background:#222;color:#fff;padding:1em;border-radius:8px;overflow-x:auto;"><code>${result.result.testCode.replace(
+              /</g,
+              "&lt;"
+            )}</code></pre>`;
+
+            // Store the playwright code for the run test button
+            window.lastPlaywrightCode = result.result.testCode;
+          }
         }
-        if (result.testPlanFeedback) {
-          lastPrompts.criticAgent = result.testPlan;
-          html += `<div style='font-weight:600;margin:1em 0 0.5em 0;'>Agent of Critic Output:</div>`;
-          html += `<p>${result.testPlanFeedback}</p>`;
-        }
-        if (result.playwrightCode) {
-          lastPrompts.testGenerator = result.testPlan;
-          html += `<div style='font-weight:600;margin:1em 0 0.5em 0;'>Agent of Test Generator Output:</div>`;
-          html += `<pre style="background:#222;color:#fff;padding:1em;border-radius:8px;overflow-x:auto;"><code>${result.playwrightCode.replace(
-            /</g,
-            "&lt;"
-          )}</code></pre>`;
-        }
-        responsePlaceholder.innerHTML = html;
+
+        responsePlaceholder.innerHTML =
+          html ||
+          `<div style='font-weight:600;color:#27ae60;'>Test generation completed successfully.</div>`;
         responseContainer.style.background = "#eafaf1";
         responseContainer.style.color = "#27ae60";
       } else {
-        // Khusus untuk error dari context agent
-        if (result.requiresUserInput && result.contextAnalysis) {
-          responsePlaceholder.innerHTML = `
-            <div style='font-weight:600;color:#e67e22;margin-bottom:0.8em;'>
-              ⚠️ Requirement Incomplete
-            </div>
-            <div style='background:#fef9e7;border:1px solid #f39c12;border-radius:6px;padding:1em;'>
-              <div style='font-weight:600;margin-bottom:0.5em;color:#e67e22;'>
-                Context Agent Analysis:
-              </div>
-              <div style='white-space:pre-line;line-height:1.6;color:#b7950b;'>
-                ${result.message}
-              </div>
-            </div>
-          `;
-          responseContainer.style.background = "#fef9e7";
-          responseContainer.style.color = "#e67e22";
-        } else {
-          responsePlaceholder.textContent = `Error: ${result.error}`;
-          responseContainer.style.background = "#fdecea";
-          responseContainer.style.color = "#c0392b";
-        }
+        // Handle error
+        responsePlaceholder.innerHTML = `<div style='font-weight:600;color:#c0392b;'>Error:</div><div>${
+          result.error || "Unknown error occurred"
+        }</div>`;
+        responseContainer.style.background = "#fdecea";
+        responseContainer.style.color = "#c0392b";
       }
     } catch (error) {
       responsePlaceholder.textContent = `Request failed: ${error.message}`;
@@ -308,35 +269,96 @@ if (generateRunTestBtn) {
       return;
     }
     try {
+      // Get form data for description
+      const description = document.getElementById("description").value || "";
+      const testUrl = document.getElementById("test-url").value || "";
+
       const res = await fetch(
         "http://localhost:3333/api/generate-and-run-test",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ playwrightCode }),
+          body: JSON.stringify({
+            playwrightCode,
+            description,
+            testUrl,
+            checkExisting: true,
+          }),
         }
       );
       const result = await res.json();
       if (result.success) {
-        responsePlaceholder.innerHTML =
-          `<div style='font-weight:600;color:#27ae60;'>Test file generated and executed successfully.</div>` +
-          (result.output
-            ? `<pre style='background:#222;color:#fff;padding:1em;border-radius:8px;overflow-x:auto;font-size:0.92em;font-family:inherit;'>${result.output.replace(
-                /</g,
-                "&lt;"
-              )}</pre>`
-            : "");
+        let html = `<div style='font-weight:600;color:#27ae60;margin-bottom:1em;'>🎭 Test file generated and executed successfully!</div>`;
+
+        // Show file info
+        if (result.testFileCreated) {
+          html += `<div style='margin-bottom:0.8em;'><strong>📁 Test File:</strong> ${result.testFileCreated.replace(
+            /.*\//,
+            ""
+          )}</div>`;
+        }
+
+        // Show existing test info if applicable
+        if (result.existingTestInfo && result.existingTestInfo.found) {
+          html += `<div style='margin-bottom:0.8em;background:#fff3cd;padding:0.5em;border-radius:4px;border:1px solid #ffeaa7;'>
+                     <strong>🔄 Merged with existing test:</strong> ${result.existingTestInfo.filename}
+                   </div>`;
+        }
+
+        // Show test results
+        if (result.testResults && result.testResults.summary) {
+          html += `<div style='margin-top:1em;background:#f8f9fa;padding:1em;border-radius:6px;border:1px solid #dee2e6;'>`;
+          html += `<div style='font-weight:600;margin-bottom:0.5em;'>Test Execution Results:</div>`;
+
+          result.testResults.summary.forEach((line) => {
+            if (line.trim()) {
+              html += `<div style='margin:0.2em 0;font-family:monospace;font-size:0.9em;'>${line}</div>`;
+            } else {
+              html += `<div style='margin:0.5em 0;'></div>`;
+            }
+          });
+
+          html += `</div>`;
+        }
+
+        responsePlaceholder.innerHTML = html;
         responseContainer.style.background = "#eafaf1";
         responseContainer.style.color = "#27ae60";
       } else {
-        responsePlaceholder.innerHTML =
-          `<div style='font-weight:600;color:#c0392b;'>Failed to generate or run test.</div>` +
-          (result.error
-            ? `<pre style='background:#fdecea;color:#c0392b;padding:1em;border-radius:8px;overflow-x:auto;font-size:0.92em;font-family:inherit;'>${result.error.replace(
-                /</g,
-                "&lt;"
-              )}</pre>`
-            : "");
+        let html = `<div style='font-weight:600;color:#c0392b;margin-bottom:1em;'>❌ Failed to generate or run test</div>`;
+
+        if (result.testFileCreated) {
+          html += `<div style='margin-bottom:0.8em;background:#fff3cd;padding:0.5em;border-radius:4px;'>
+                     <strong>📁 Test file was created:</strong> ${result.testFileCreated.replace(
+                       /.*\//,
+                       ""
+                     )}
+                   </div>`;
+        }
+
+        if (result.error) {
+          html += `<div style='background:#fdecea;padding:1em;border-radius:6px;border:1px solid:#f5c6cb;margin-top:0.8em;'>
+                     <strong>Error:</strong><br>
+                     <pre style='margin:0.5em 0 0 0;font-size:0.9em;white-space:pre-wrap;'>${result.error.replace(
+                       /</g,
+                       "&lt;"
+                     )}</pre>`;
+
+          // Show suggestions if available
+          if (result.suggestions && result.suggestions.length > 0) {
+            html += `<div style='margin-top:0.8em;'>
+                       <strong>💡 Suggestions:</strong>
+                       <ul style='margin:0.3em 0 0 1.2em;'>`;
+            result.suggestions.forEach((suggestion) => {
+              html += `<li style='margin:0.2em 0;'><code>${suggestion}</code></li>`;
+            });
+            html += `</ul></div>`;
+          }
+
+          html += `</div>`;
+        }
+
+        responsePlaceholder.innerHTML = html;
         responseContainer.style.background = "#fdecea";
         responseContainer.style.color = "#c0392b";
       }
@@ -347,6 +369,38 @@ if (generateRunTestBtn) {
     }
   });
 }
+
+// Analysis Method Toggle Handler
+document.addEventListener("DOMContentLoaded", function () {
+  const analysisRadios = document.querySelectorAll(
+    'input[name="analysisMethod"]'
+  );
+  const liveDescription = document.getElementById("live-description");
+  const fileDescription = document.getElementById("file-description");
+
+  // Update description based on selected method
+  function updateAnalysisDescription() {
+    const selectedMethod = document.querySelector(
+      'input[name="analysisMethod"]:checked'
+    ).value;
+
+    if (selectedMethod === "live-ui") {
+      liveDescription.classList.add("active");
+      fileDescription.classList.remove("active");
+    } else {
+      liveDescription.classList.remove("active");
+      fileDescription.classList.add("active");
+    }
+  }
+
+  // Add event listeners to radio buttons
+  analysisRadios.forEach((radio) => {
+    radio.addEventListener("change", updateAnalysisDescription);
+  });
+
+  // Initialize description on page load
+  updateAnalysisDescription();
+});
 
 /* Tambahkan style opsional untuk .btn-disabled di style.css:
 .btn-disabled { opacity: 0.6; pointer-events: none; }

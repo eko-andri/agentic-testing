@@ -17,14 +17,10 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 'lts/*'
+          node-version: "lts/*"
 
       - name: Install Dependencies
         run: npm install
 
       - name: Run Playwright Tests
         run: npx playwright test
-
-      # Step to run Agent Tests is disabled for now
-      # - name: Run Agent Tests
-      #   run: node server/e2e-pipeline/orchestrator.js

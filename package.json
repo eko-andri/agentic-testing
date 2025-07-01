@@ -1,0 +1,48 @@
+{
+  "name": "agentic-testing",
+  "version": "1.0.0",
+  "description": "Live UI analysis and automated test generation for web applications",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "demo": "node server/dev-tools/test-live-ui-demo.js",
+    "integration-demo": "node server/dev-tools/test-package-integration.js",
+    "analyze": "node server/dev-tools/test-puppeteer-quick.js"
+  },
+  "keywords": [
+    "testing",
+    "automation",
+    "ui-testing",
+    "form-analysis",
+    "playwright",
+    "puppeteer",
+    "live-ui",
+    "test-generation"
+  ],
+  "author": "Agentic Testing Team",
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^21.0.0",
+    "@playwright/test": "^1.40.0",
+    "jsdom": "^23.0.0"
+  },
+  "peerDependencies": {
+    "@playwright/test": "^1.40.0"
+  },
+  "files": [
+    "index.js",
+    "liveUIAnalyzer.js",
+    "orchestrator.js",
+    "utils.js",
+    "prompts.js",
+    "README.md",
+    "docs/"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/agentic-testing.git"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

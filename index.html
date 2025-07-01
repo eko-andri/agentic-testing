@@ -157,6 +157,52 @@ Customer wants a policy holder date of birth is start from 16 years</textarea
               >
             </div>
 
+            <!-- Analysis Method Toggle -->
+            <div class="field-group">
+              <label for="analysis-method">Analysis Method:</label>
+              <div class="toggle-container">
+                <div class="toggle-wrapper">
+                  <input
+                    type="radio"
+                    id="analysis-live"
+                    name="analysisMethod"
+                    value="live-ui"
+                    checked />
+                  <label for="analysis-live" class="toggle-option">
+                    <span class="toggle-icon">🌐</span>
+                    <span class="toggle-text">
+                      <strong>Live UI</strong>
+                      <small>Analyze running application</small>
+                    </span>
+                  </label>
+                </div>
+                <div class="toggle-wrapper">
+                  <input
+                    type="radio"
+                    id="analysis-file"
+                    name="analysisMethod"
+                    value="file-based" />
+                  <label for="analysis-file" class="toggle-option">
+                    <span class="toggle-icon">📁</span>
+                    <span class="toggle-text">
+                      <strong>File-based</strong>
+                      <small>Analyze HTML files</small>
+                    </span>
+                  </label>
+                </div>
+              </div>
+              <small class="analysis-description">
+                <span id="live-description" class="analysis-desc active">
+                  ✅ Real-time form analysis • ✅ Dynamic behavior detection •
+                  ⚠️ Requires running app
+                </span>
+                <span id="file-description" class="analysis-desc">
+                  ✅ Fast static analysis • ✅ No server required • ❌ Limited
+                  to static HTML
+                </span>
+              </small>
+            </div>
+
             <button type="submit" class="btn-main">Submit</button>
             <button
               type="button"
