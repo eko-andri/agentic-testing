@@ -126,7 +126,7 @@ async function autoInstallOllamaModel(modelName) {
 const PROVIDERS = {
   groq: {
     name: "Groq Cloud",
-    defaultModel: process.env.GROQ_MODEL || "qwen3:30b",
+    defaultModel: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
     description: "Groq Cloud API with high-speed inference",
   },
   openai: {

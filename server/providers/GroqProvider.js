@@ -10,7 +10,7 @@ class GroqProvider extends BaseProvider {
   constructor() {
     super({
       name: "Groq Cloud",
-      defaultModel: process.env.GROQ_MODEL || "qwen3:30b",
+      defaultModel: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
       description: "Groq Cloud API with high-speed inference",
       requiresApiKey: true,
       timeout: parseInt(process.env.CLOUD_LLM_TIMEOUT) || 120000,
@@ -32,6 +32,92 @@ class GroqProvider extends BaseProvider {
 
   async isAvailable() {
     return !!this.apiKey;
+  }
+
+  /**
+   * Check if specific model is available on Groq
+   * @param {string} modelId - Model ID to check
+   * @returns {Promise<Object>} - Model information or null if not available
+   */
+  async checkModelAvailability(modelId) {
+    if (!this.apiKey) {
+      throw new Error("Groq API key not configured");
+    }
+
+    try {
+      const response = await axios.get(
+        `https://api.groq.com/openai/v1/models/${modelId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 10000, // 10 second timeout for model check
+        }
+      );
+
+      if (response.status === 200 && response.data) {
+        const modelInfo = response.data;
+        console.log(`[${this.name}] Model ${modelId} is available:`, {
+          owner: modelInfo.owned_by,
+          contextWindow: modelInfo.context_window,
+          maxTokens: modelInfo.max_completion_tokens,
+          active: modelInfo.active,
+        });
+
+        return {
+          available: true,
+          info: modelInfo,
+        };
+      }
+
+      return { available: false, reason: "Model not found" };
+    } catch (error) {
+      if (error.response?.status === 404) {
+        console.log(`[${this.name}] Model ${modelId} not found`);
+        return { available: false, reason: "Model not found" };
+      }
+
+      console.warn(
+        `[${this.name}] Error checking model ${modelId}:`,
+        error.message
+      );
+      return { available: false, reason: error.message };
+    }
+  }
+
+  /**
+   * List all available models on Groq
+   * @returns {Promise<Array>} - Array of available models
+   */
+  async listAvailableModels() {
+    if (!this.apiKey) {
+      throw new Error("Groq API key not configured");
+    }
+
+    try {
+      const response = await axios.get(
+        "https://api.groq.com/openai/v1/models",
+        {
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 10000,
+        }
+      );
+
+      if (response.status === 200 && response.data?.data) {
+        const models = response.data.data.filter((model) => model.active);
+        console.log(`[${this.name}] Found ${models.length} active models`);
+        return models;
+      }
+
+      return [];
+    } catch (error) {
+      console.warn(`[${this.name}] Error listing models:`, error.message);
+      return [];
+    }
   }
 
   async call({ prompt, system = "", temperature = 0.3, model = null }) {

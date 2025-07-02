@@ -1,17 +1,46 @@
 # Agentic Testing - Documentation
 
-## 📋 Current Documentation
+# Agentic Testing - Documentation
 
-The architecture has been completely refactored to a unified system. All documentation is now centralized in the dev-tools directory.
+## 📋 Complete Documentation
 
-## 🎯 Quick Access
+The framework now has comprehensive documentation for all aspects:
 
-**Main Documentation:**
+## 🎯 Main Documentation
+
+| Document                                                 | Purpose                                            | Target Audience |
+| -------------------------------------------------------- | -------------------------------------------------- | --------------- |
+| **[📖 Setup Guide](SETUP.md)**                           | Installation, configuration, troubleshooting       | **All users**   |
+| **[🏗️ Architecture Guide](ARCHITECTURE.md)**             | Technical details, provider system, best practices | **Developers**  |
+| **[🎯 Interactive Docs](../server/dev-tools/README.js)** | Complete framework reference                       | **All users**   |
+
+## 🚀 Quick Access
+
+**Get Started:**
 
 ```bash
-# Complete framework documentation
+# Read setup guide
+cat docs/SETUP.md
+
+# Interactive documentation
 node server/dev-tools/README.js
 
+# Health check
+node server/dev-tools/unified-test-runner.js --health-check --all-providers
+```
+
+**Main Tool:**
+
+```bash
+# Unified test runner (all operations)
+node server/dev-tools/unified-test-runner.js --help
+```
+
+## 📚 Additional Resources
+
+**Framework Summaries:**
+
+```bash
 # Architecture success summary
 node server/dev-tools/unified-architecture-success.js
 
@@ -20,13 +49,6 @@ node server/dev-tools/refactor-summary.js
 
 # Claude 4 optimization details
 node server/dev-tools/claude4-optimization-summary.js
-```
-
-**Main Tool:**
-
-```bash
-# Unified test runner (all testing operations)
-node server/dev-tools/unified-test-runner.js --help
 ```
 
 ## 📁 Legacy Documentation

@@ -10,7 +10,7 @@ class ContextFilterAgent {
   constructor(config = {}) {
     this.config = {
       provider: config.provider || "ollama",
-      model: config.model || "qwen3:30b",
+      model: config.model || process.env.LLM_MODEL || "qwen3:8b",
       temperature: config.temperature || 0.2,
       ...config,
     };

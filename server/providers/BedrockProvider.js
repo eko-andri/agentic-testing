@@ -1,7 +1,7 @@
 /**
  * AWS Bedrock Provider Implementation
- * Handles AWS Bedrock API calls with Claude models
- * Optimized specifically for Claude 4 with direct code output
+ * Handles AWS Bedrock API calls - PLATFORM SPECIFIC ONLY
+ * Model-specific logic is handled by model tools
  */
 
 const {
@@ -9,6 +9,7 @@ const {
   InvokeModelCommand,
 } = require("@aws-sdk/client-bedrock-runtime");
 const BaseProvider = require("./BaseProvider");
+const { ModelFactory } = require("../models");
 
 class BedrockProvider extends BaseProvider {
   constructor() {
@@ -16,9 +17,10 @@ class BedrockProvider extends BaseProvider {
       name: "AWS Bedrock",
       defaultModel:
         process.env.BEDROCK_MODEL ||
+        process.env.DEFAULT_BEDROCK_MODEL ||
         "apac.anthropic.claude-sonnet-4-20250514-v1:0",
-      description: "AWS Bedrock managed Claude models",
-      requiresApiKey: false, // Uses AWS credentials
+      description: "AWS Bedrock with Claude models",
+      requiresApiKey: true,
       timeout: parseInt(process.env.CLOUD_LLM_TIMEOUT) || 120000,
       maxTokens: parseInt(process.env.MAX_TOKENS) || 4000,
     });
@@ -26,8 +28,8 @@ class BedrockProvider extends BaseProvider {
     this.region = process.env.AWS_REGION || "ap-southeast-1";
     this.client = null;
 
-    // Model mapping for easier reference
-    this.modelMap = {
+    // Model ID mappings for friendlier names (platform-specific)
+    this.modelMappings = {
       "claude-4-sonnet": "apac.anthropic.claude-sonnet-4-20250514-v1:0",
       "claude-3-sonnet": "anthropic.claude-3-sonnet-20240229-v1:0",
       "claude-3-haiku": "anthropic.claude-3-haiku-20240307-v1:0",
@@ -35,38 +37,45 @@ class BedrockProvider extends BaseProvider {
       "claude-3.5-sonnet": "anthropic.claude-3-5-sonnet-20241022-v2:0",
     };
 
-    // Inference profile mapping for APAC region
-    this.profileMap = {
-      "apac.anthropic.claude-sonnet-4-20250514-v1:0":
-        "arn:aws:bedrock:ap-southeast-1:518870435381:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0",
+    // Cost mapping for different models (platform-specific)
+    this.pricingMap = {
+      "claude-4-sonnet": { input: 0.003, output: 0.015 }, // per 1K tokens (estimated)
+      "claude-3-haiku": { input: 0.00025, output: 0.00125 },
+      "claude-3-sonnet": { input: 0.003, output: 0.015 },
+      "claude-3-opus": { input: 0.015, output: 0.075 },
     };
   }
 
   async initialize() {
-    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+    const requiredEnvVars = ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"];
+    const missingVars = requiredEnvVars.filter(
+      (varName) => !process.env[varName]
+    );
+
+    if (missingVars.length > 0) {
       throw new Error(
-        "AWS credentials not found. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY."
+        `AWS credentials not found. Set ${missingVars.join(", ")}.`
       );
     }
 
     try {
-      const config = { region: this.region };
-
-      config.credentials = {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        sessionToken: process.env.AWS_SESSION_TOKEN,
-      };
-
-      this.client = new BedrockRuntimeClient(config);
+      this.client = new BedrockRuntimeClient({
+        region: this.region,
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+          ...(process.env.AWS_SESSION_TOKEN && {
+            sessionToken: process.env.AWS_SESSION_TOKEN,
+          }),
+        },
+      });
 
       console.log(
         `[${this.name}] Initialized in region: ${this.region} with model: ${this.defaultModel}`
       );
       return true;
     } catch (error) {
-      console.error(`[${this.name}] Initialization failed:`, error.message);
-      throw error;
+      throw new Error(`AWS Bedrock initialization failed: ${error.message}`);
     }
   }
 
@@ -76,15 +85,27 @@ class BedrockProvider extends BaseProvider {
     );
   }
 
-  async call({ prompt, system = "", temperature = 0.3, model = null }) {
+  async call({
+    prompt,
+    system = "",
+    temperature = 0.3,
+    model = null,
+    taskType = "general",
+  }) {
     const params = this._validateParams({ prompt, system, temperature, model });
 
     if (!this.client) {
       await this.initialize();
     }
 
-    // Resolve model ID from friendly name
+    // Resolve model ID from friendly name (platform-specific)
     const modelId = this._resolveModelId(params.model);
+
+    // Create model-specific tool instance
+    const modelTool = ModelFactory.createModel(modelId, {
+      baseTimeout: this.timeout,
+      maxTokens: this.maxTokens,
+    });
 
     console.log(
       `Calling ${this.name} API with model: ${modelId} (timeout: ${
@@ -93,177 +114,119 @@ class BedrockProvider extends BaseProvider {
     );
 
     try {
-      // Claude 4 specific optimizations
-      const optimizedSystem = this._optimizeSystemPromptForClaude4(
+      // Use model tool for optimization (model-specific)
+      const optimizedSystem = modelTool.optimizeSystemPrompt(
         params.system,
-        modelId
+        taskType
       );
-      const optimizedPrompt = this._optimizeUserPromptForClaude4(
+      const optimizedPrompt = modelTool.optimizeUserPrompt(
         params.prompt,
-        modelId
+        taskType
       );
+      const modelParams = modelTool.getRequestParams(params, taskType);
 
+      // Platform-specific request body for Bedrock
       const requestBody = {
         anthropic_version: "bedrock-2023-05-31",
-        max_tokens: this.maxTokens,
-        temperature: params.temperature,
+        max_tokens: modelParams.max_tokens || this.maxTokens,
+        temperature: modelParams.temperature,
         messages: [{ role: "user", content: optimizedPrompt }],
-        top_p: 0.9,
-        top_k: 250,
-        stop_sequences: ["```", "\n\n---", "## "], // Stop at various narrative markers
+        top_p: modelParams.top_p || 0.9,
+        top_k: modelParams.top_k || 250,
+        stop_sequences: modelParams.stop_sequences || [],
       };
 
-      // Add optimized system prompt if provided (as top-level property)
+      // Add system prompt if provided
       if (optimizedSystem) {
         requestBody.system = optimizedSystem;
       }
 
-      // Build command with inference profile if available
-      const commandParams = {
+      // Handle inference profiles (platform-specific for Claude 4)
+      if (modelId.includes("claude-sonnet-4")) {
+        console.log(`[${this.name}] Using inference profile for ${modelId}`);
+      }
+
+      const command = new InvokeModelCommand({
         modelId: modelId,
         contentType: "application/json",
         accept: "application/json",
         body: JSON.stringify(requestBody),
-      };
+      });
 
-      // Add inference profile for models that require it
-      const profileArn = this.profileMap[modelId];
-      if (profileArn) {
-        commandParams.inferenceConfig = {
-          profileArn: profileArn,
-        };
-        console.log(`[${this.name}] Using inference profile for ${modelId}`);
-      }
-
-      const command = new InvokeModelCommand(commandParams);
       const response = await this.client.send(command);
-
-      return this._parseBedrockResponse(response, modelId);
+      return this._parseBedrockResponse(response, modelId, modelTool, taskType);
     } catch (error) {
       this._handleError(error);
     }
   }
 
   /**
-   * Optimize system prompt specifically for Claude 4
-   * Claude 4 tends to give narrative explanations, we want direct code output
+   * Parse Bedrock-specific response format (platform-specific)
    */
-  _optimizeSystemPromptForClaude4(systemPrompt, modelId) {
-    if (!modelId.includes("claude-sonnet-4")) {
-      return systemPrompt; // Only optimize for Claude 4
-    }
-
-    const claude4SystemPrefix = `You are a Playwright TypeScript code generator. 
-  
-  CRITICAL INSTRUCTIONS:
-  - Generate ONLY working TypeScript code
-  - NO explanations, NO narratives, NO comments outside code
-  - Start immediately with import statements
-  - End with complete test functions
-  - Use modern Playwright patterns (page.locator, expect)
-  - Include proper TypeScript types (Page, Locator)
-  
-  `;
-
-    return claude4SystemPrefix + (systemPrompt || "");
-  }
-
-  /**
-   * Optimize user prompt specifically for Claude 4
-   * Add specific instructions to avoid narrative responses
-   */
-  _optimizeUserPromptForClaude4(userPrompt, modelId) {
-    if (!modelId.includes("claude-sonnet-4")) {
-      return userPrompt; // Only optimize for Claude 4
-    }
-
-    const claude4PromptSuffix = `
-  
-  OUTPUT FORMAT REQUIREMENTS:
-  - Start with: import { test, expect, Page } from '@playwright/test';
-  - No explanations before code
-  - No markdown formatting
-  - Direct TypeScript code only
-  - Complete and executable test file
-  
-  Generate the code now:`;
-
-    return userPrompt + claude4PromptSuffix;
-  }
-
-  /**
-   * Claude 4 specific response parsing
-   * Removes narrative parts and extracts clean code
-   */
-  _parseClaude4Response(content, modelId) {
-    if (!modelId.includes("claude-sonnet-4")) {
-      return content; // Only optimize for Claude 4
-    }
-
-    // Remove common narrative patterns from Claude 4
-    let cleanContent = content
-      .replace(/^Here's.*?code.*?:\s*/i, "") // "Here's the code:"
-      .replace(/^I'll.*?create.*?:\s*/i, "") // "I'll create..."
-      .replace(/^Let me.*?generate.*?:\s*/i, "") // "Let me generate..."
-      .replace(/^This.*?will.*?:\s*/i, "") // "This will..."
-      .replace(/^The.*?test.*?:\s*/i, "") // "The test..."
-      .replace(/```typescript\n?/g, "") // Remove markdown
-      .replace(/```ts\n?/g, "") // Remove markdown
-      .replace(/```javascript\n?/g, "") // Remove markdown
-      .replace(/```js\n?/g, "") // Remove markdown
-      .replace(/```\n?/g, "") // Remove markdown
-      .trim();
-
-    // If it starts with import, it's probably clean code
-    if (cleanContent.startsWith("import")) {
-      return cleanContent;
-    }
-
-    // Try to find the first import statement and extract from there
-    const importMatch = cleanContent.match(/(import\s+.*[\s\S]*)/);
-    if (importMatch) {
-      return importMatch[1].trim();
-    }
-
-    // If no import found, look for test functions
-    const testMatch = cleanContent.match(/(test\s*\(.*[\s\S]*)/);
-    if (testMatch) {
-      // Add minimal import if missing
-      return `import { test, expect } from '@playwright/test';\n\n${testMatch[1].trim()}`;
-    }
-
-    // Return original if no patterns match
-    return cleanContent;
-  }
-
-  /**
-   * Parse Bedrock-specific response format
-   */
-  _parseBedrockResponse(response, modelId) {
+  _parseBedrockResponse(response, modelId, modelTool, taskType) {
     if (!response.body) {
       throw new Error("Empty response from Bedrock");
     }
 
     const responseBody = JSON.parse(new TextDecoder().decode(response.body));
 
-    if (!responseBody.content?.[0]?.text) {
+    // Debug: log the actual response structure
+    console.log(`[${this.name}] Response structure:`, {
+      keys: Object.keys(responseBody),
+      contentType: typeof responseBody.content,
+      hasContent: !!responseBody.content,
+      contentLength: responseBody.content?.length || 0,
+      firstContentItem: responseBody.content?.[0]
+        ? Object.keys(responseBody.content[0])
+        : [],
+    });
+
+    // Handle different response formats (platform-specific)
+    let content = null;
+
+    // Format 1: Standard Claude format with content array
+    if (
+      responseBody.content &&
+      Array.isArray(responseBody.content) &&
+      responseBody.content[0]?.text
+    ) {
+      content = responseBody.content[0].text;
+    }
+    // Format 2: Direct text response
+    else if (responseBody.text) {
+      content = responseBody.text;
+    }
+    // Format 3: Completion format
+    else if (responseBody.completion) {
+      content = responseBody.completion;
+    }
+    // Format 4: Message format
+    else if (responseBody.message?.content) {
+      content = responseBody.message.content;
+    }
+
+    if (!content) {
+      console.error(
+        `[${this.name}] No text content found in response:`,
+        JSON.stringify(responseBody, null, 2)
+      );
       throw new Error("No text content in Bedrock response");
     }
 
-    const content = responseBody.content[0].text.trim();
+    const cleanContent = content.trim();
 
-    // Apply Claude 4 specific parsing if needed
-    const cleanContent = this._parseClaude4Response(content, modelId);
+    // Use model tool for response parsing (model-specific)
+    const finalContent = modelTool.parseResponse(cleanContent, taskType);
 
-    // Bedrock-specific response analysis
+    // Platform-specific response analysis
     const responseInfo = {
-      content: cleanContent,
+      content: finalContent,
       usage: responseBody.usage || {},
       model: modelId,
       stopReason: responseBody.stop_reason,
     };
 
-    // Log Bedrock-specific metrics
+    // Log platform-specific metrics
     if (responseInfo.usage.input_tokens) {
       const totalTokens =
         responseInfo.usage.input_tokens + responseInfo.usage.output_tokens;
@@ -271,7 +234,7 @@ class BedrockProvider extends BaseProvider {
         `[${this.name}] Tokens used: ${totalTokens} (input: ${responseInfo.usage.input_tokens}, output: ${responseInfo.usage.output_tokens})`
       );
 
-      // Estimate cost (rough approximation for Claude models)
+      // Estimate cost (platform-specific)
       const estimatedCost = this._estimateCost(responseInfo.usage, modelId);
       if (estimatedCost > 0) {
         console.log(
@@ -280,68 +243,58 @@ class BedrockProvider extends BaseProvider {
       }
     }
 
-    return this._parseResponse(cleanContent);
+    return finalContent;
   }
 
   /**
-   * Resolve model ID from friendly name or full ARN
+   * Resolve model ID from friendly name (platform-specific)
    */
-  _resolveModelId(model) {
-    if (!model) return this.defaultModel;
-
-    // If it's already a full ARN, return as-is
-    if (
-      model.includes("anthropic.claude") ||
-      model.includes("apac.anthropic.claude")
-    )
-      return model;
-
-    // Try to resolve from model map
-    return this.modelMap[model.toLowerCase()] || this.defaultModel;
+  _resolveModelId(modelName) {
+    return this.modelMappings[modelName] || modelName;
   }
 
   /**
-   * Estimate cost based on token usage (rough approximation)
+   * Estimate cost based on usage (platform-specific)
    */
   _estimateCost(usage, modelId) {
-    if (!usage.input_tokens || !usage.output_tokens) return 0;
-
-    // Rough pricing for Claude models (as of 2024/2025)
-    const pricing = {
-      "claude-4-sonnet": { input: 0.003, output: 0.015 }, // per 1K tokens (estimated)
-      "claude-3-haiku": { input: 0.00025, output: 0.00125 },
-      "claude-3-sonnet": { input: 0.003, output: 0.015 },
-      "claude-3-opus": { input: 0.015, output: 0.075 },
-    };
-
     let modelType = "claude-3-haiku"; // default
     if (modelId.includes("sonnet-4")) modelType = "claude-4-sonnet";
     else if (modelId.includes("sonnet")) modelType = "claude-3-sonnet";
     else if (modelId.includes("opus")) modelType = "claude-3-opus";
 
-    const rates = pricing[modelType];
-    const inputCost = (usage.input_tokens / 1000) * rates.input;
-    const outputCost = (usage.output_tokens / 1000) * rates.output;
+    const pricing = this.pricingMap[modelType];
+    if (!pricing) return 0;
+
+    const inputCost = (usage.input_tokens / 1000) * pricing.input;
+    const outputCost = (usage.output_tokens / 1000) * pricing.output;
 
     return inputCost + outputCost;
   }
 
   /**
-   * Bedrock-specific error handling
+   * Platform-specific error handling
    */
   _handleError(error) {
-    const errorMap = {
-      ValidationException: `Bedrock validation error: ${error.message}`,
-      ResourceNotFoundException: `Bedrock model not found: ${error.message}`,
-      AccessDeniedException: `Bedrock access denied: Check AWS credentials and permissions`,
-      ThrottlingException: `Bedrock throttled: ${error.message}`,
-      ServiceQuotaExceededException: `Bedrock quota exceeded: ${error.message}`,
-      ModelTimeoutException: `Bedrock model timeout: ${error.message}`,
-      ModelNotReadyException: `Bedrock model not ready: ${error.message}`,
-    };
+    if (error.name === "ValidationException") {
+      throw new Error(`AWS Bedrock validation error: ${error.message}`);
+    }
 
-    if (errorMap[error.name]) {
-      throw new Error(errorMap[error.name]);
+    if (error.name === "ThrottlingException") {
+      throw new Error(
+        `AWS Bedrock throttling: ${error.message}. Try again later.`
+      );
+    }
+
+    if (error.name === "AccessDeniedException") {
+      throw new Error(
+        `AWS Bedrock access denied: ${error.message}. Check your IAM permissions.`
+      );
+    }
+
+    if (error.name === "ResourceNotFoundException") {
+      throw new Error(
+        `AWS Bedrock model not found: ${error.message}. Check model availability in your region.`
+      );
     }
 
     // Fall back to base error handling
@@ -349,24 +302,22 @@ class BedrockProvider extends BaseProvider {
   }
 
   /**
-   * Get available Bedrock models
+   * Health check for Bedrock Provider
    */
-  getAvailableModels() {
-    return Object.values(this.modelMap);
-  }
+  async healthCheck() {
+    try {
+      const testResponse = await this.call({
+        prompt: 'Respond with just "OK" to confirm connection.',
+        system: "You are testing the connection. Respond briefly.",
+        temperature: 0.1,
+        taskType: "health_check",
+      });
 
-  /**
-   * Get model mapping
-   */
-  getModelMap() {
-    return this.modelMap;
-  }
-
-  /**
-   * Get inference profile mapping
-   */
-  getProfileMap() {
-    return this.profileMap;
+      return testResponse.toLowerCase().includes("ok");
+    } catch (error) {
+      console.warn(`[${this.name}] Health check failed:`, error.message);
+      return false;
+    }
   }
 }
 

@@ -163,11 +163,18 @@ class ProviderManager {
         console.log(`[ProviderManager] 🔄 Trying ${fallbackProvider}...`);
 
         try {
+          // Use the fallback provider's default model instead of the original model
+          const fallbackModel =
+            this.providers.get(fallbackProvider).defaultModel;
+          console.log(
+            `[ProviderManager] 🔄 Using ${fallbackProvider} default model: ${fallbackModel}`
+          );
+
           return await this.providers.get(fallbackProvider).call({
             prompt,
             system,
             temperature,
-            model,
+            model: fallbackModel, // Use provider's default model for fallback
           });
         } catch (fallbackError) {
           console.warn(
@@ -185,11 +192,16 @@ class ProviderManager {
 
       if (this.providers.has("ollama")) {
         try {
+          const ollamaModel = this.providers.get("ollama").defaultModel;
+          console.log(
+            `[ProviderManager] 🔄 Using Ollama default model: ${ollamaModel}`
+          );
+
           return await this.providers.get("ollama").call({
             prompt,
             system,
             temperature,
-            model,
+            model: ollamaModel, // Use Ollama's default model
           });
         } catch (ollamaError) {
           console.warn(

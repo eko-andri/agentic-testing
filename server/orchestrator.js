@@ -55,7 +55,7 @@ class Orchestrator {
     // LLM configuration
     this.config = {
       defaultProvider: process.env.LLM_PROVIDER || "ollama",
-      defaultModel: process.env.LLM_MODEL || "qwen3:30b",
+      defaultModel: process.env.LLM_MODEL || "qwen3:8b",
       maxRetries: 3,
       timeout: 600000,
       ...config,
@@ -855,12 +855,22 @@ class Orchestrator {
       return envModel;
     }
 
-    // Task-specific model selection for Qwen
+    // Task-specific model selection using environment variables
     const taskModels = {
-      form_analysis: "qwen2.5-coder:3b", // Lighter model for analysis
-      test_generation: "qwen3:30b", // Standard model for generation
-      test_improvement: "qwen3:30b", // Standard model for improvement
-      code_verification: "qwen2.5-coder:3b", // Lighter model for verification
+      form_analysis:
+        process.env.FORM_ANALYSIS_MODEL || process.env.LLM_MODEL || "qwen3:8b",
+      test_generation:
+        process.env.TEST_GENERATION_MODEL ||
+        process.env.LLM_MODEL ||
+        "qwen3:8b",
+      test_improvement:
+        process.env.TEST_IMPROVEMENT_MODEL ||
+        process.env.LLM_MODEL ||
+        "qwen3:8b",
+      code_verification:
+        process.env.CODE_VERIFICATION_MODEL ||
+        process.env.LLM_MODEL ||
+        "qwen3:8b",
     };
 
     return taskModels[taskType] || this.config.defaultModel;

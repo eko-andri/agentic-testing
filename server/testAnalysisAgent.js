@@ -1,4 +1,4 @@
-const DatabaseAgent = require("./database/databaseAgent");
+const DatabaseAgent = require("./database-dummy"); // Use dummy database agent
 const { ContextFilterAgent } = require("./contextFilterAgent");
 const { PROMPTS } = require("./prompts");
 const { callLLM } = require("./utils");
@@ -7,7 +7,7 @@ const fs = require("fs");
 
 class TestAnalysisAgent {
   constructor() {
-    this.dbAgent = new DatabaseAgent();
+    this.dbAgent = new DatabaseAgent(); // Use dummy database agent
     this.contextFilterAgent = new ContextFilterAgent();
     this.prompts = PROMPTS;
     this.testDirectory = path.join(__dirname, "tests");
