@@ -1,48 +1,51 @@
 # Agentic Testing
 
-🤖 **Live UI Analysis & Automated Test Generation** - Automated system for analyzing web applications and generating comprehensive test suites!
+🤖 **Unified AI-Powered Test Generation Framework** - Centralized testing system with multiple LLM providers for automated code generation!
 
 ## 🎯 **What is this?**
 
-Agentic Testing is a smart tool that uses AI agents to:
+Agentic Testing is a unified framework that uses multiple AI providers to:
 
-- **Analyze web forms** in real-time or from HTML files
-- **Generate modern Playwright test code** that's ready to use
-- **Detect validation rules** and business logic automatically
-- **Create comprehensive test scenarios** that are error-free
+- **Generate modern Playwright test code** with anti-narrative prompts
+- **Support multiple LLM providers** (Bedrock Claude 4, Ollama, Groq, OpenAI, Anthropic)
+- **Provide health checks** and cost monitoring for all providers
+- **Centralize all testing** through a single unified test runner
 
 ## 🚀 **Key Features**
 
-### **🔄 Dual Analysis Methods**
+### **� Modular Provider System**
 
-- **Live UI Analysis** → Puppeteer analyzes running applications in real-time
-- **File-based Analysis** → LLM analyzes static HTML files
+- **BaseProvider** → Abstract base with health checks
+- **BedrockProvider** → AWS Bedrock Claude 4 (optimized)
+- **OllamaProvider** → Local Ollama models
+- **GroqProvider, OpenAIProvider, AnthropicProvider** → Cloud APIs
 
-### **🤖 Smart Test Generation**
+### **🤖 Anti-Narrative Code Generation**
 
-- Modern Playwright syntax (page.locator, fill, expect)
-- Error-free code generation with optimized prompts
-- Multiple test scenarios: validation, edge cases, business rules
+- Direct code output (no explanations or narrative)
+- Custom parsers for clean code extraction
+- Optimized prompts for pure code generation
 
-### **🎨 Beautiful User Interface**
+### **� Unified Test Runner**
 
-- Toggle interface for choosing analysis method
-- Real-time progress indicators
-- Clear status messages and error handling
+- Single entry point for all testing operations
+- Clean parameterization system
+- Standardized output format
+- Reusable utilities for UI and CLI
 
 ### **🏗️ Clean Architecture**
 
-- Modular design with separation of concerns
-- Event-driven agent orchestration
-- Future-proof for advanced features
+- Centralized provider management
+- Health checks and cost monitoring
+- Production-ready modular design
 
 ## 📚 **Documentation**
 
-| Document                                       | Purpose                              | Target Audience  |
-| ---------------------------------------------- | ------------------------------------ | ---------------- |
-| **[📖 Setup Guide](docs/SETUP.md)**            | Installation, usage, testing         | **All users**    |
-| **[🏗️ Architecture](docs/ARCHITECTURE.md)**    | Technical details, advanced features | **Developers**   |
-| **[🛠️ Dev Tools](server/dev-tools/HOW_TO.md)** | Development scripts, debugging       | **Contributors** |
+| Document                                                                        | Purpose                                     | Target Audience |
+| ------------------------------------------------------------------------------- | ------------------------------------------- | --------------- |
+| **[🎯 Unified Test Runner](server/dev-tools/)**                                 | Main orchestrator and all testing utilities | **All users**   |
+| **[🏗️ Architecture Success](server/dev-tools/unified-architecture-success.js)** | Complete technical overview                 | **Developers**  |
+| **[� Documentation](server/dev-tools/README.js)**                               | Full framework documentation                | **All users**   |
 
 ## 🚀 **Quick Start**
 
@@ -52,75 +55,84 @@ git clone <repository>
 cd agentic-testing/server
 npm install
 
-# 2. Start server
-npm run dev
+# 2. Health check all providers
+node dev-tools/unified-test-runner.js --health-check --all-providers
 
-# 3. Open browser
-open http://localhost:3333
+# 3. Run E2E test with Bedrock Claude 4
+node dev-tools/unified-test-runner.js --e2e --bedrock-claude4
 
-# 4. Generate tests!
+# 4. Clean all test data
+node dev-tools/unified-test-runner.js --clean-all
 ```
 
-➡️ **For detailed setup instructions, see [Setup Guide](docs/SETUP.md)**
+➡️ **For complete documentation, run: `node server/dev-tools/README.js`**
 
 ## 🎯 **Use Cases**
 
 **Perfect for:**
 
-- ✅ Form validation testing
-- ✅ E2E test generation
-- ✅ Dynamic web application analysis
-- ✅ CI/CD pipeline integration
-- ✅ Test coverage automation
+- ✅ Multi-provider LLM testing
+- ✅ Automated Playwright test generation
+- ✅ AI code generation with cost monitoring
+- ✅ Provider health checks and monitoring
+- ✅ Clean, anti-narrative code output
 
 **Great for developers who:**
 
-- 🚀 Want automated test generation
-- 🔍 Need deep form analysis
-- 📊 Love smart test recommendations
-- 🎯 Build user journey testing
-- 📦 Seek easy integration
+- 🚀 Want centralized AI testing
+- 🔍 Need multiple LLM provider support
+- 📊 Love cost and token monitoring
+- 🎯 Build production-ready test automation
+- 📦 Seek modular, reusable architecture
 
 ## 🌟 **What's Special**
 
-### **Analysis Method Toggle**
+### **Unified Test Runner**
 
+```bash
+# Health check all providers
+node dev-tools/unified-test-runner.js --health-check --all-providers
+
+# E2E test with specific provider
+node dev-tools/unified-test-runner.js --e2e --bedrock-claude4
+
+# Clean all test data
+node dev-tools/unified-test-runner.js --clean-all
 ```
-🌐 Live UI Analysis (Recommended)
-  ✅ Real-time analysis
-  ✅ Dynamic behavior detection
-  ⚠️ Requires running app
 
-📁 File-based Analysis (Legacy)
-  ✅ Fast static analysis
-  ✅ Offline capable
-  ❌ Limited to static HTML
-```
-
-### **Modern Code Generation**
+### **Anti-Narrative Code Generation**
 
 ```javascript
-// ✅ Generated code uses modern patterns
+// ✅ Generated code is clean and direct (no explanations)
 const dobInput = page.locator("#dob");
 await dobInput.fill("1990-01-01");
 await expect(page.locator(".error")).toBeVisible();
 ```
 
+### **Modular Provider System**
+
+```javascript
+// ✅ All providers use standardized interface
+const provider = providerManager.getProvider("bedrock-claude4");
+const result = await provider.generateCode(prompt);
+```
+
 ## 📊 **Current Status**
 
-- ✅ **Core Features**: Analysis methods, test generation, UI toggle
-- ✅ **Code Quality**: Modern Playwright, error-free generation
-- ✅ **Architecture**: Clean, modular, extensible
-- ✅ **Documentation**: Structured, comprehensive, up-to-date
-- 🔄 **Advanced Features**: Event-driven agents, complex UI analysis
+- ✅ **Unified Architecture**: All testing centralized in unified-test-runner
+- ✅ **Modular Providers**: Bedrock, Ollama, Groq, OpenAI, Anthropic support
+- ✅ **Anti-Narrative Prompts**: Direct code output (no explanations)
+- ✅ **Health Checks**: Provider availability and cost monitoring
+- ✅ **Clean Codebase**: All legacy files cleaned up
+- ✅ **Production Ready**: Standardized interfaces and error handling
 
 ## 🤝 **Contributing**
 
-1. Read [Architecture Guide](docs/ARCHITECTURE.md) for technical details
-2. Check [Setup Guide](docs/SETUP.md) for development workflow
-3. Use [Dev Tools](server/dev-tools/HOW_TO.md) for testing
-4. Follow clean architecture patterns
-5. Submit PRs with tests
+1. Use `unified-test-runner.js` for all testing operations
+2. Follow modular provider pattern for new providers
+3. Maintain anti-narrative prompt optimization
+4. Add health checks for new integrations
+5. Keep architecture centralized and clean
 
 ## 📝 **License**
 
@@ -128,6 +140,6 @@ MIT License - feel free to use and modify.
 
 ---
 
-**📖 Ready to start? Go to [Setup Guide](docs/SETUP.md) for detailed instructions!**
+**📖 Ready to start? Run: `node server/dev-tools/README.js` for complete documentation!**
 
-**Last Updated**: June 30, 2025 | **Version**: 2.0.0
+**Last Updated**: July 2, 2025 | **Version**: 3.0.0 (Unified Architecture)
