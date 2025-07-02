@@ -14,7 +14,7 @@ class GroqProvider extends BaseProvider {
       description: "Groq Cloud API with high-speed inference",
       requiresApiKey: true,
       timeout: parseInt(process.env.CLOUD_LLM_TIMEOUT) || 120000,
-      maxTokens: parseInt(process.env.MAX_TOKENS) || 4000,
+      maxTokens: 8192,
     });
 
     this.apiUrl = "https://api.groq.com/openai/v1/chat/completions";
@@ -140,19 +140,57 @@ class GroqProvider extends BaseProvider {
         params.system
       );
 
+      // Use special payload for Llama4 Maverick only (DISABLED, using legacy payload for all models)
+      const isLlama4 =
+        params.model && params.model.toLowerCase().includes("llama-4-maverick");
+      let requestBody;
+      /*
+      if (isLlama4) {
+        requestBody = {
+          model: params.model,
+          messages: [
+            {
+              role: "system",
+              content: optimized.system,
+            },
+            { role: "user", content: optimized.prompt },
+          ],
+          // reasoning_effort: "none",
+          temperature: params.temperature,
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "code_only_response",
+              schema: {
+                type: "object",
+                properties: {
+                  code: {
+                    type: "string",
+                    description:
+                      "Complete executable code without any explanations",
+                  },
+                },
+                required: ["code"],
+                additionalProperties: false,
+              },
+            },
+          },
+        };
+      } else {
+      */
       const messages = [];
       if (optimized.system) {
         messages.push({ role: "system", content: optimized.system });
       }
       messages.push({ role: "user", content: optimized.prompt });
-
-      const requestBody = {
+      requestBody = {
         model: params.model,
         messages: messages,
         temperature: params.temperature,
         max_tokens: this.maxTokens,
         stream: false,
       };
+      //}
 
       const headers = {
         "Content-Type": "application/json",
@@ -164,6 +202,10 @@ class GroqProvider extends BaseProvider {
         headers: headers,
       });
 
+      // If Llama4 Maverick, parse code from response.code (DISABLED)
+      // if (isLlama4 && response.data && response.data.code) {
+      //   return response.data.code;
+      // }
       return this._parseGroqResponse(response.data);
     } catch (error) {
       this._handleError(error);

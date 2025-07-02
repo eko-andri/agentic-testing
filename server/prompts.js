@@ -51,6 +51,8 @@ Return a JSON object with this structure:
   TEST_CODE_GENERATOR: {
     system: `You are an expert Playwright test automation engineer. Generate production-ready TypeScript test code using Page Object Model pattern and comprehensive test coverage.
 
+IMPORTANT: For data-driven tests, use a for...of loop to generate multiple test() calls. Do NOT use test.each. Playwright TypeScript does not support test.each.,
+
 CRITICAL REQUIREMENTS:
 1. Generate ONLY executable TypeScript code - NO explanations, comments, or markdown
 2. Use EXACT TypeScript syntax with proper imports and types
@@ -67,6 +69,7 @@ TYPESCRIPT STRUCTURE REQUIRED:
 - Individual test cases with comprehensive coverage
 - Proper async/await patterns throughout
 
+
 PAGE OBJECT MODEL REQUIREMENTS:
 - TypeScript class with constructor accepting Page object
 - Constructor parameter: constructor(page: Page)
@@ -77,12 +80,14 @@ PAGE OBJECT MODEL REQUIREMENTS:
 - Error checking methods with proper return types
 - Clean separation of concerns
 
+
 EXACT TYPING PATTERNS REQUIRED:
 - Page type: page: Page (not any)
 - Locator type: readonly fieldName: Locator (not any or ElementHandle)
 - Constructor: constructor(page: Page) - no import() statements
 - Method signatures: async methodName(): Promise<returnType>
 - Import: import { test, expect, Page, Locator } from '@playwright/test';
+
 
 TEST COVERAGE REQUIREMENTS:
 - Individual field validation (positive/negative cases)
@@ -93,6 +98,7 @@ TEST COVERAGE REQUIREMENTS:
 - Edge case handling (empty, boundary values, special characters)
 - Data-driven test scenarios using test.each or similar patterns
 
+
 MODERN PLAYWRIGHT PATTERNS:
 - Use page.locator() exclusively for element selection
 - Use expect().toBeVisible(), expect().toHaveText() for assertions
@@ -100,6 +106,7 @@ MODERN PLAYWRIGHT PATTERNS:
 - Use page.click() for button interactions
 - Implement proper wait strategies with expect() assertions
 - Use test.beforeEach for consistent test setup
+
 
 FORBIDDEN PATTERNS:
 - waitForSelector() or other deprecated wait methods
@@ -112,13 +119,15 @@ FORBIDDEN PATTERNS:
 - any type for Page or Locator objects
 - ElementHandle types (use Locator instead)
 
+
 OUTPUT REQUIREMENTS:
 1. Start with: import { test, expect, Page, Locator } from '@playwright/test';
 2. Define interfaces for test data
 3. Implement Page Object Model class with proper Page and Locator typing
 4. Create test data constants
 5. Write comprehensive test suite with multiple describe blocks
-6. End with complete test scenarios`,
+6. End with complete test scenarios
+`,
 
     buildPrompt: (formAnalysis, testUrl, framework, options = {}) => {
       const businessContext = formAnalysis.businessContext || {};
@@ -144,6 +153,8 @@ OUTPUT REQUIREMENTS:
         .join("\n");
 
       return `Generate production-ready TypeScript Playwright test automation code for comprehensive form validation testing.
+
+IMPORTANT: For data-driven tests, use a for...of loop to generate multiple test() calls. Do NOT use test.each. Playwright TypeScript does not support test.each.
 
 BUSINESS CONTEXT:
 Purpose: ${description}
