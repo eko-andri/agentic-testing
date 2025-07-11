@@ -19,6 +19,9 @@ const {
   resetProgress,
   getProgress,
   callLLM,
+  getCurrentProvider,
+  testProvider,
+  switchProvider,
 } = require("./utils");
 
 // Initialize LLM providers immediately after import
@@ -223,8 +226,8 @@ app.post("/reset-progress", (req, res) => {
 
 app.get("/providers", async (req, res) => {
   try {
-    const providers = callLLM.getAvailableProviders();
-    const current = callLLM.getCurrentProvider();
+    const providers = getAvailableProviders();
+    const current = getCurrentProvider();
 
     res.json({
       success: true,
@@ -250,12 +253,12 @@ app.post("/switch-provider", async (req, res) => {
       });
     }
 
-    callLLM.switchProvider(provider);
+    switchProvider(provider);
 
     res.json({
       success: true,
       message: `Switched to provider: ${provider}`,
-      current: callLLM.getCurrentProvider(),
+      current: getCurrentProvider(),
     });
   } catch (error) {
     res.status(500).json({
@@ -269,7 +272,7 @@ app.post("/test-provider", async (req, res) => {
   try {
     const { provider } = req.body;
 
-    const result = await callLLM.testProvider(provider);
+    const result = await testProvider(provider);
 
     res.json({
       success: true,
@@ -293,7 +296,7 @@ app.get("/", (req, res) => {
     name: "Agentic Testing Server",
     version: "2.0.0-consolidated",
     status: "running",
-    provider: callLLM.getCurrentProvider().name,
+    provider: getCurrentProvider().name,
     timestamp: new Date().toISOString(),
     endpoints: {
       main: "POST /api/generate-test",
@@ -309,7 +312,7 @@ app.get("/health", (req, res) => {
     status: "healthy",
     uptime: process.uptime(),
     memory: process.memoryUsage(),
-    provider: callLLM.getCurrentProvider(),
+    provider: getCurrentProvider(),
     timestamp: new Date().toISOString(),
   });
 });
@@ -730,32 +733,40 @@ app.listen(PORT, async () => {
   console.log(`📡 Server running on http://localhost:${PORT}`);
 
   // Get current provider info after initialization
-  const currentProviderInfo = callLLM.getCurrentProvider();
-  console.log(`🤖 LLM Provider: ${currentProviderInfo.name}`);
-  console.log(`🧠 Model: ${currentProviderInfo.model}`);
+  const currentProviderInfo = getCurrentProvider();
+  if (currentProviderInfo) {
+    console.log(`🤖 LLM Provider: ${currentProviderInfo.name}`);
+    console.log(`🧠 Model: ${currentProviderInfo.model}`);
 
-  // Test connection to current provider
-  console.log(`🔍 Testing ${currentProviderInfo.name} connection...`);
-  try {
-    const testResult = await callLLM.testProvider();
-    if (testResult.success) {
-      console.log(`✅ ${currentProviderInfo.name} connection successful`);
-    } else {
-      console.log(
-        `❌ ${currentProviderInfo.name} connection failed: ${testResult.error}`
-      );
-      console.log(`💡 You may need to:`);
-      if (currentProviderInfo.name === "Ollama") {
-        console.log(`   - Start Ollama server: ollama serve`);
-        console.log(`   - Or install and start Ollama from https://ollama.ai`);
+    // Test connection to current provider
+    console.log(`🔍 Testing ${currentProviderInfo.name} connection...`);
+    try {
+      const testResult = await testProvider();
+      if (testResult.success) {
+        console.log(`✅ ${currentProviderInfo.name} connection successful`);
+      } else {
+        console.log(
+          `❌ ${currentProviderInfo.name} connection failed: ${testResult.error}`
+        );
+        console.log(`💡 You may need to:`);
+        if (currentProviderInfo.name === "Ollama") {
+          console.log(`   - Start Ollama server: ollama serve`);
+          console.log(
+            `   - Or install and start Ollama from https://ollama.ai`
+          );
+        }
+        if (currentProviderInfo.name === "AWS Bedrock") {
+          console.log(`   - Check AWS credentials in .env file`);
+          console.log(`   - Ensure AWS region is supported for Bedrock`);
+        }
       }
-      if (currentProviderInfo.name === "AWS Bedrock") {
-        console.log(`   - Check AWS credentials in .env file`);
-        console.log(`   - Ensure AWS region is supported for Bedrock`);
-      }
+    } catch (error) {
+      console.log(`⚠️  Could not test provider connection: ${error.message}`);
     }
-  } catch (error) {
-    console.log(`⚠️  Could not test provider connection: ${error.message}`);
+  } else {
+    console.log(
+      `⚠️  No LLM provider available. Please check your configuration.`
+    );
   }
 
   console.log(`📚 Available endpoints:`);

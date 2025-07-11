@@ -1,424 +1,410 @@
-# Setup Guide - Agentic Testing
+# Setup Guide - Agentic Testing Framework
 
-Complete guide for installing, using, and running tests with Agentic Testing.
+Complete installation and setup guide for the unified agentic testing framework.
 
-## 📋 **Prerequisites**
-
-- **Node.js** v14+ (recommended v18+)
-- **npm** or **yarn**
-- **LLM Provider**: Ollama with models like qwen2.5-coder:7b
-- **Browser**: Chrome/Chromium for Puppeteer
-
-## ⚡ **Installation**
-
-### **1. Clone Repository**
+## 🚀 **Quick Start**
 
 ```bash
+# 1. Clone the repository
 git clone <repository-url>
 cd agentic-testing
-```
 
-### **2. Install Dependencies**
-
-```bash
+# 2. Install dependencies
 cd server
 npm install
+
+# 3. Setup environment variables
+cp .env.example .env
+# Edit .env with your API keys
+
+# 4. Test the installation
+node dev-tools/unified-test-runner.js --health-check --all-providers
 ```
 
-### **3. Setup LLM Provider**
+## ⚙️ **Detailed Setup**
 
-#### **Option A: Ollama (Recommended)**
+### **1. Prerequisites**
 
-```bash
-# Install Ollama
-curl -fsSL https://ollama.ai/install.sh | sh
+- **Node.js**: Version 16+ recommended
+- **npm**: Version 8+ (comes with Node.js)
+- **Git**: For cloning the repository
 
-# Pull model
-ollama pull qwen2.5-coder:7b
+Optional:
 
-# Start Ollama service
-ollama serve
-```
+- **Ollama**: For local LLM models (if using OllamaProvider)
+- **Playwright**: Will be installed automatically
 
-#### **Option B: AWS Bedrock**
+### **2. Installation**
 
 ```bash
-# Set environment variables
-export AWS_ACCESS_KEY_ID=your_key
-export AWS_SECRET_ACCESS_KEY=your_secret
-export AWS_REGION=us-east-1
-```
+# Clone the repository
+git clone <repository-url>
+cd agentic-testing
 
-### **4. Environment Configuration**
-
-```bash
-# Create .env file (optional)
-LLM_PROVIDER=ollama
-LLM_MODEL=qwen2.5-coder:7b
-PORT=3333
-```
-
-## 🚀 **How to Use**
-
-### **1. Start the Server**
-
-```bash
+# Navigate to server directory
 cd server
-npm run dev        # Development mode (auto-reload)
-npm start          # Production mode
+
+# Install all dependencies
+npm install
+
+# Verify installation
+node --version  # Should show Node.js version
+npm list        # Should show installed packages
 ```
 
-The server will run on `http://localhost:3333`
+### **3. Environment Configuration**
 
-### **2. Open Web Interface**
+Copy the example environment file:
 
 ```bash
-open http://localhost:3333
+cp .env.example .env
 ```
 
-### **3. Generate Tests**
-
-#### **Step-by-step Process:**
-
-1. **Fill Form Description**
-
-   ```
-   Example: "User registration form with email, password, and age validation"
-   ```
-
-2. **Fill Acceptance Criteria**
-
-   ```
-   Example:
-   - Email must be valid format
-   - Password minimum 8 characters
-   - Age must be 18 or older
-   - Form shows validation errors
-   ```
-
-3. **Choose Analysis Method**
-
-   **🌐 Live UI Analysis (Recommended):**
-
-   - Enter application URL (e.g., `http://localhost:5500/policy-form.html`)
-   - Application must be running and accessible
-   - Best for dynamic forms with JavaScript validation
-
-   **📁 File-based Analysis (Legacy):**
-
-   - Upload HTML file atau paste HTML content
-   - Good for static forms without dynamic behavior
-
-4. **Submit & Wait**
-   - Click "Generate Tests" button
-   - Wait for analysis and generation process
-   - Download generated Playwright test file
-
-### **4. Run Generated Tests**
+Edit `.env` file with your API keys:
 
 ```bash
-# Install Playwright (if not installed)
-npm install -g @playwright/test
+# AWS Bedrock (Claude 4 - Recommended)
+AWS_REGION=ap-southeast-1
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
 
-# Run generated test
-npx playwright test generated-test.spec.js
+# Groq Cloud (Fast inference)
+GROQ_API_KEY=your_groq_api_key
 
-# Run with UI mode
-npx playwright test --ui
+# OpenAI (GPT models)
+OPENAI_API_KEY=your_openai_api_key
 
-# Run with debug mode
-npx playwright test --debug
+# Anthropic (Claude models)
+ANTHROPIC_API_KEY=your_anthropic_api_key
+
+# Ollama (Local models - optional)
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=qwen3:8b
 ```
 
-## 🎯 **Analysis Methods Comparison**
+**Provider Setup Priority:**
 
-### **🌐 Live UI Analysis**
+1. **AWS Bedrock** (Recommended): Best performance, cost-effective
+2. **Ollama**: Free local models, good for development
+3. **Groq**: Fast inference, good for testing
+4. **OpenAI/Anthropic**: Backup options
 
-**When to Use:**
+### **4. Provider-Specific Setup**
 
-- Modern web applications (React, Vue, Angular)
-- Forms with JavaScript validation
-- Dynamic content or conditional fields
-- SPAs with client-side routing
+#### **AWS Bedrock Setup**
 
-**How it Works:**
+1. **Create AWS Account** and setup credentials
+2. **Enable Bedrock Access** in your AWS region
+3. **Request Model Access** for Claude 4:
 
-1. Puppeteer opens the specified URL
-2. Extracts DOM structure and form elements
-3. Captures dynamic behaviors and validation rules
-4. No LLM needed for basic analysis (faster)
+   - Go to AWS Bedrock console
+   - Request access to Anthropic Claude models
+   - Wait for approval (usually instant)
 
-**Example:**
+4. **Create IAM User** with Bedrock permissions:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": [
+           "bedrock:InvokeModel",
+           "bedrock:InvokeModelWithResponseStream"
+         ],
+         "Resource": "*"
+       }
+     ]
+   }
+   ```
+
+#### **Ollama Setup (Local Models)**
+
+1. **Install Ollama**:
+
+   ```bash
+   # macOS
+   brew install ollama
+
+   # Or download from https://ollama.ai
+   ```
+
+2. **Start Ollama service**:
+
+   ```bash
+   ollama serve
+   ```
+
+3. **Download models**:
+
+   ```bash
+   # Qwen 3 (8B) - Recommended
+   ollama pull qwen3:8b
+
+   # Or other models
+   ollama pull llama3:8b
+   ollama pull codellama:7b
+   ```
+
+#### **Cloud Provider Setup**
+
+For **Groq**, **OpenAI**, or **Anthropic**:
+
+1. **Create account** on respective platform
+2. **Generate API key** from dashboard
+3. **Add to .env file** with appropriate variable name
+
+### **5. Verification**
+
+Test your setup with health checks:
+
+```bash
+# Check all providers
+node dev-tools/unified-test-runner.js --health-check --all-providers
+
+# Check specific provider
+node dev-tools/unified-test-runner.js --health-check --bedrock
+node dev-tools/unified-test-runner.js --health-check --ollama
+```
+
+Expected output:
+
+```
+🏥 Health Check Summary:
+   ✅ Health-bedrock
+   ✅ Health-ollama
+   ⚠️  Health-groq (not available)
+```
+
+## 🎯 **Usage Examples**
+
+### **Basic Operations**
+
+```bash
+# Complete documentation
+node dev-tools/README.js
+
+# Health check all providers
+node dev-tools/unified-test-runner.js --health-check --all-providers
+
+# E2E test with Bedrock Claude 4
+node dev-tools/unified-test-runner.js --e2e --bedrock-claude4
+
+# E2E test with Ollama Qwen
+node dev-tools/unified-test-runner.js --e2e --ollama-qwen
+
+# Clean all test data
+node dev-tools/unified-test-runner.js --clean-all
+```
+
+### **Advanced Usage**
+
+```bash
+# Test specific provider
+node dev-tools/unified-test-runner.js --test-provider bedrock
+
+# Custom model
+node dev-tools/unified-test-runner.js --e2e --bedrock --model claude-3-5-sonnet
+
+# Multiple tests
+node dev-tools/unified-test-runner.js --e2e --all-providers
+```
+
+## 🔧 **Configuration Options**
+
+You can customize the framework behavior by editing configuration files:
+
+### **Provider Configuration**
+
+Edit `server/providers/index.js` to modify provider settings:
 
 ```javascript
-// Generated code captures dynamic behavior
-await page.locator("#email").fill("invalid-email");
-await page.locator("#submit").click();
-await expect(page.locator(".error-message")).toBeVisible();
+// Example: Modify timeout for all providers
+const defaultConfig = {
+  timeout: 180000, // 3 minutes
+  maxTokens: 4000,
+  temperature: 0.3,
+};
 ```
 
-### **📁 File-based Analysis**
+### **Model Configuration**
 
-**When to Use:**
-
-- Static HTML forms
-- Simple forms without JavaScript
-- Development/testing scenarios
-- Offline analysis
-
-**How it Works:**
-
-1. LLM analyzes HTML structure
-2. Identifies form elements and attributes
-3. Infers validation rules from HTML attributes
-4. Generates tests based on static analysis
-
-**Example:**
-
-```html
-<!-- Input HTML -->
-<input type="email" required minlength="5" id="email" />
-
-<!-- Generated test understands requirements -->
-await page.locator('#email').fill('abc'); // Too short await
-expect(page.locator('.error')).toBeVisible();
-```
-
-## 🧪 **Testing Your Setup**
-
-### **1. Basic Functionality Test**
-
-```bash
-cd server/dev-tools
-node test-analysis-method-toggle.js
-```
-
-### **2. Live UI Demo**
-
-```bash
-# Start a simple HTTP server for demo
-cd /path/to/agentic-testing
-python -m http.server 8000  # or use Live Server extension
-
-# Run live UI analysis demo
-cd server/dev-tools
-node test-live-ui-demo.js
-```
-
-### **3. Compare Both Methods**
-
-```bash
-cd server/dev-tools
-node test-orchestrator-integration.js
-```
-
-### **4. Test Form Examples**
-
-Demo forms tersedia di project root:
-
-- `policy-form.html` - Insurance policy form dengan age validation
-- `cv-builder.html` - CV builder form dengan multiple fields
-
-## 🛠️ **Advanced Configuration**
-
-### **Custom LLM Models**
-
-```bash
-# Use different Ollama model
-export LLM_MODEL=codellama:7b
-
-# Use different provider
-export LLM_PROVIDER=bedrock
-export LLM_MODEL=anthropic.claude-v2
-```
-
-### **Puppeteer Configuration**
+Edit individual provider files to change default models:
 
 ```javascript
-// In server/liveUIAnalyzer.js, modify browser options:
-const browser = await puppeteer.launch({
-  headless: false, // Show browser for debugging
-  devtools: true, // Open DevTools
-  slowMo: 100, // Slow down actions
-});
-```
-
-### **Test Generation Options**
-
-```javascript
-// In orchestrator configuration
-const orchestrator = new Orchestrator({
-  analysisMethod: "live-ui",
-  framework: "playwright", // or "cypress"
-  generateMultipleScenarios: true,
-  includeNegativeTests: true,
-});
-```
-
-## 🚨 **Troubleshooting**
-
-### **Common Issues & Solutions**
-
-#### **"Cannot connect to LLM"**
-
-```bash
-# Check if Ollama is running
-ollama ps
-
-# Restart Ollama
-ollama serve
-
-# Test connection
-curl http://localhost:11434/api/tags
-```
-
-#### **"Puppeteer cannot launch browser"**
-
-```bash
-# Install required dependencies (Linux)
-sudo apt-get install -y chromium-browser
-
-# Or install Chromium via Puppeteer
-npx puppeteer browsers install chrome
-```
-
-#### **"Analysis failed"**
-
-- **For Live UI**: Ensure application is running and accessible
-- **For File-based**: Check HTML syntax and structure
-- **General**: Check network connectivity and model availability
-
-#### **"Generated test fails"**
-
-- Review element selectors in generated code
-- Check timing issues (add waits if needed)
-- Verify application state during test execution
-
-### **Debug Mode**
-
-```bash
-# Enable detailed logging
-DEBUG=1 npm run dev
-
-# Run with verbose output
-npm run dev -- --verbose
-```
-
-### **Log Files**
-
-- Server logs: `server/logs/`
-- Analysis reports: `server/reports/`
-- Screenshots: `server/screenshots/`
-
-## 📊 **Performance Tips**
-
-### **For Better Analysis**
-
-1. **Use stable selectors** - IDs are better than classes
-2. **Ensure clean HTML** - Well-formed markup works better
-3. **Test with realistic data** - Use actual user scenarios
-4. **Consider loading times** - Applications need time to load
-
-### **For Generated Tests**
-
-1. **Review before running** - Generated tests may need customization
-2. **Add setup/teardown** - Include login, logout, cleanup
-3. **Use page objects** - For complex applications
-4. **Integrate with CI/CD** - Automate test execution
-
-## 🎯 **Best Practices**
-
-### **Form Analysis**
-
-- Start with simple forms before complex ones
-- Use Live UI analysis for dynamic forms
-- Provide clear acceptance criteria
-- Test with different data scenarios
-
-### **Test Generation**
-
-- Generate multiple test files for different scenarios
-- Include both positive and negative test cases
-- Add meaningful test descriptions
-- Use proper assertions
-
-### **Development Workflow**
-
-1. Design forms with testability in mind
-2. Use semantic HTML attributes
-3. Add proper ARIA labels
-4. Include validation feedback elements
-
-## 🔄 **Integration with CI/CD**
-
-### **GitHub Actions Example**
-
-```yaml
-name: E2E Tests
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: "18"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright
-        run: npx playwright install
-
-      - name: Run generated tests
-        run: npx playwright test
-```
-
-### **Jenkins Pipeline**
-
-```groovy
-pipeline {
-    agent any
-    stages {
-        stage('Install') {
-            steps {
-                sh 'npm ci'
-                sh 'npx playwright install'
-            }
-        }
-        stage('Test') {
-            steps {
-                sh 'npx playwright test'
-            }
-            post {
-                always {
-                    publishHTML([
-                        allowMissing: false,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: 'playwright-report',
-                        reportFiles: 'index.html',
-                        reportName: 'Playwright Report'
-                    ])
-                }
-            }
-        }
-    }
+// In BedrockProvider.js
+constructor(config = {}) {
+    super({
+        name: "AWS Bedrock",
+        defaultModel: "apac.anthropic.claude-sonnet-4-20250514-v1:0",
+        // ... other config
+    });
 }
 ```
 
-## 📈 **What's Next?**
+### **Prompt Configuration**
 
-After successfully setting up:
+Modify anti-narrative prompts in provider files:
 
-1. **Explore Advanced Features** - Check [Architecture Guide](ARCHITECTURE.md)
-2. **Contribute to Development** - See [Dev Tools Guide](../server/dev-tools/HOW_TO.md)
-3. **Customize for Your Needs** - Modify prompts and analysis logic
-4. **Share Your Experience** - Contribute back to the project
+```javascript
+// In BedrockProvider.js
+const ANTI_NARRATIVE_SYSTEM = `
+You are a code generator. Output ONLY the requested code.
+NO explanations, NO comments, NO narrative text.
+Just pure, clean, functional code.
+`;
+```
+
+## 📊 **Monitoring & Debugging**
+
+### **Logging**
+
+The framework provides detailed logging:
+
+```bash
+# Enable debug mode
+DEBUG=* node dev-tools/unified-test-runner.js --health-check
+
+# Provider-specific logging
+DEBUG=provider:* node dev-tools/unified-test-runner.js --e2e --bedrock
+```
+
+### **Test Results**
+
+All test results are saved to:
+
+```
+server/test-results/unified-test-results.json
+```
+
+View results:
+
+```bash
+cat server/test-results/unified-test-results.json | jq
+```
+
+### **Cost Monitoring**
+
+Monitor LLM usage costs:
+
+```bash
+# Results include cost information
+{
+  "provider": "bedrock",
+  "tokens": 265,
+  "cost": 0.001767,
+  "model": "claude-4"
+}
+```
+
+## 🐛 **Troubleshooting**
+
+### **Common Issues**
+
+**1. "Provider not available" error:**
+
+```bash
+# Check API keys in .env
+cat .env | grep API_KEY
+
+# Test specific provider
+node dev-tools/unified-test-runner.js --health-check --bedrock
+```
+
+**2. "Connection timeout" error:**
+
+```bash
+# Increase timeout in provider config
+# Or check network connectivity
+curl -I https://api.groq.com/
+```
+
+**3. "Model not found" error:**
+
+```bash
+# For Bedrock: Check model access in AWS console
+# For Ollama: Pull the model
+ollama pull qwen3:8b
+```
+
+**4. "Permission denied" errors:**
+
+```bash
+# Check AWS IAM permissions
+# Or verify API key has correct scopes
+```
+
+### **Debug Mode**
+
+Enable detailed debugging:
+
+```bash
+# Full debug output
+DEBUG=* node dev-tools/unified-test-runner.js --health-check
+
+# Provider-only debug
+DEBUG=provider:* node dev-tools/unified-test-runner.js --e2e --bedrock
+
+# Network debug
+DEBUG=http:* node dev-tools/unified-test-runner.js --health-check
+```
+
+### **Reset Everything**
+
+If you need to start fresh:
+
+```bash
+# Clean all test data
+node dev-tools/unified-test-runner.js --clean-all
+
+# Reinstall dependencies
+rm -rf node_modules package-lock.json
+npm install
+
+# Reset configuration
+cp .env.example .env
+# Re-enter your API keys
+```
+
+## 🎓 **Next Steps**
+
+After successful setup:
+
+1. **Read the Architecture Guide**: `docs/ARCHITECTURE.md`
+2. **Run Complete Documentation**: `node dev-tools/README.js`
+3. **Try E2E Testing**: `node dev-tools/unified-test-runner.js --e2e --bedrock-claude4`
+4. **Explore Provider System**: Look at `server/providers/` directory
+5. **Check Cost Monitoring**: Review test results for token usage
+
+## 📞 **Support**
+
+- **Documentation**: Run `node dev-tools/README.js`
+- **Architecture**: Read `docs/ARCHITECTURE.md`
+- **Issues**: Check provider health with `--health-check`
+- **Debug**: Use `DEBUG=*` environment variable
+
+## ✅ **Verification Checklist**
+
+Before using the framework, verify:
+
+- [ ] Node.js 16+ installed
+- [ ] Dependencies installed (`npm install`)
+- [ ] Environment variables configured (`.env` file)
+- [ ] At least one provider working (health check passes)
+- [ ] Can run basic commands without errors
+- [ ] Test results directory created and writable
+
+**Success indicators:**
+
+```bash
+node dev-tools/unified-test-runner.js --health-check --all-providers
+# Should show ✅ for at least one provider
+```
 
 ---
 
-**Need help? Check the [Architecture Guide](ARCHITECTURE.md) for technical details or browse the [Dev Tools](../server/dev-tools/HOW_TO.md) for debugging options.**
+**Ready to start? Run the health check and begin testing!**
+
+```bash
+node dev-tools/unified-test-runner.js --health-check --all-providers
+```

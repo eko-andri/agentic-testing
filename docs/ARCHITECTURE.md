@@ -1,639 +1,395 @@
-# Architecture Guide - Agentic Testing
+# Architecture Guide - Agentic Testing (Unified Framework)
 
-Technical reference for developers who want to understand internal architecture, extend functionality, or contribute to the project.
+Complete technical reference for the unified agentic testing framework with modular LLM providers.
 
-## 🏗️ **System Architecture**
+## 🏗️ **System Architecture Overview**
 
-### **High-Level Overview**
+The framework has been completely refactored into a **unified, centralized architecture** with the following principles:
+
+- **Single Entry Point**: All testing operations through `unified-test-runner.js`
+- **Modular Providers**: Each LLM provider is self-contained with standardized interface
+- **Anti-Narrative Prompts**: Direct code output without explanations
+- **Health Monitoring**: Built-in availability and cost tracking
+- **Production Ready**: Clean error handling and standardized outputs
+
+### **High-Level Architecture**
 
 ```mermaid
 flowchart TD
-    A[Frontend UI] --> B{Analysis Method Toggle}
-    B -->|Live UI| C[LiveUIAnalyzer]
-    B -->|File-based| D[FORM_STRUCTURE_ANALYZER]
-    C --> E[Orchestrator]
-    D --> E
-    E --> F[LLM Provider]
-    F --> G[TEST_CODE_GENERATOR]
-    G --> H[Generated Playwright Tests]
+    A[Unified Test Runner] --> B[Provider Manager]
+    B --> C[BaseProvider]
+    C --> D[BedrockProvider]
+    C --> E[OllamaProvider]
+    C --> F[GroqProvider]
+    C --> G[OpenAIProvider]
+    C --> H[AnthropicProvider]
 
-    I[Event Monitor] --> J[Agent Army]
-    J --> K[Validation Agent]
-    J --> L[Test Generation Agent]
-    J --> M[Risk Assessment Agent]
+    A --> I[Health Check System]
+    A --> J[E2E Testing System]
+    A --> K[Code Generation Pipeline]
+
+    K --> L[Anti-Narrative Prompts]
+    L --> M[Custom Parsers]
+    M --> N[Clean Code Output]
+
+    I --> O[Cost Monitoring]
+    J --> P[Playwright Execution]
 ```
 
-### **Core Components**
+## 🎯 **Core Components**
 
-#### **1. Frontend Layer**
+### **1. Unified Test Runner** (`dev-tools/unified-test-runner.js`)
 
-- **UI Components**: Analysis method toggle, form inputs, progress indicators
-- **Event Handling**: User interactions, real-time updates
-- **State Management**: Analysis method selection, form data
-- **File**: `index.html`, `main.js`, `style.css`
-
-#### **2. Backend API Layer**
-
-- **Express Server**: RESTful API endpoints
-- **Request Handling**: Analysis requests, file uploads
-- **Response Management**: Progress updates, results delivery
-- **File**: `server/index.js`
-
-#### **3. Analysis Layer**
-
-- **LiveUIAnalyzer**: Puppeteer-based live DOM analysis
-- **FormStructureAnalyzer**: LLM-based HTML content analysis
-- **Advanced UI Analyzer**: Complex scenario analysis (ready for integration)
-- **Files**: `server/liveUIAnalyzer.js`, `server/advanced-ui-analyzer-concept.js`
-
-#### **4. Orchestration Layer**
-
-- **Orchestrator**: Main coordination logic
-- **Method Selection**: Live vs File-based analysis routing
-- **Pipeline Management**: Multi-step analysis and generation
-- **File**: `server/orchestrator.js`
-
-#### **5. AI/LLM Layer**
-
-- **Provider Abstraction**: Ollama, Bedrock, OpenAI support
-- **Prompt Engineering**: Optimized prompts for different scenarios
-- **Response Processing**: Structured output parsing
-- **Files**: `server/prompts.js`, `server/utils.js`
-
-## 🔧 **Technical Implementation**
-
-### **Analysis Methods Deep Dive**
-
-#### **Live UI Analysis**
+The central orchestrator that handles all testing operations:
 
 ```javascript
-// server/liveUIAnalyzer.js
-class LiveUIAnalyzer {
-  async analyzeForm(url) {
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-
-    const page = await browser.newPage();
-    await page.goto(url);
-
-    // Extract form structure
-    const formData = await page.evaluate(() => {
-      const forms = Array.from(document.querySelectorAll("form"));
-      return forms.map((form) => ({
-        action: form.action,
-        method: form.method,
-        fields: Array.from(form.elements).map((field) => ({
-          name: field.name,
-          type: field.type,
-          required: field.required,
-          validation: this.extractValidation(field),
-        })),
-      }));
-    });
-
-    await browser.close();
-    return this.formatFormContext(formData);
-  }
-}
-```
-
-**Key Features:**
-
-- Direct DOM manipulation
-- Real-time state capture
-- No LLM dependency for basic analysis
-- JavaScript execution context
-- Dynamic behavior detection
-
-#### **File-based Analysis**
-
-```javascript
-// server/orchestrator.js (file-based path)
-async analyzeFileContent(htmlContent) {
-  const prompt = FORM_STRUCTURE_ANALYZER.buildPrompt(
-    htmlContent,
-    this.description,
-    this.acceptanceCriteria
-  );
-
-  const response = await this.llmProvider.generate(prompt);
-  return JSON.parse(response);
-}
-```
-
-**Key Features:**
-
-- LLM-powered analysis
-- Static HTML parsing
-- Inference-based validation rules
-- Fast offline analysis
-- No browser dependencies
-
-### **Advanced UI Analyzer (Ready for Integration)**
-
-```javascript
-// server/advanced-ui-analyzer-concept.js
-const ADVANCED_UI_ANALYZER = {
-  buildPrompt: (domSnapshot, userActions, description, acceptanceCriteria) => {
-    return `Analyze this live UI behavior:
-    
-    DOM Snapshot: ${JSON.stringify(domSnapshot, null, 2)}
-    User Actions: ${JSON.stringify(userActions, null, 2)}
-    
-    Identify:
-    1. Dynamic validation rules not visible in static DOM
-    2. Conditional field dependencies
-    3. Multi-step form logic
-    4. Error handling patterns
-    5. Business rule enforcement
-    
-    Return enhanced form context with dynamic behaviors...`;
-  },
-};
-```
-
-**Capabilities:**
-
-- Multi-step form workflow analysis
-- Conditional field dependency detection
-- Dynamic validation rule capture
-- Business logic enforcement identification
-- Complex interaction pattern recognition
-
-### **Event-Driven Agent Architecture**
-
-```javascript
-// server/liveEventMonitor.js (Proof of Concept)
-class LiveEventMonitor extends EventEmitter {
-  async startMonitoring(page) {
-    // Listen for form interactions
-    await page.evaluate(() => {
-      document.addEventListener("submit", (e) => {
-        window.agenticTestingEvents.emit("formSubmit", {
-          form: e.target,
-          data: new FormData(e.target),
-        });
-      });
-    });
-  }
-}
-
-// Usage
-monitor.on("formSubmit", async (data) => {
-  await agents.validation.analyze(data);
-  await agents.testGeneration.generate(data);
-  await agents.riskAssessment.evaluate(data);
-});
-```
-
-## 🎨 **Code Architecture Patterns**
-
-### **1. Strategy Pattern - Analysis Methods**
-
-```javascript
-class AnalysisStrategy {
-  async analyze(input) {
-    throw new Error("Must implement analyze method");
-  }
-}
-
-class LiveUIStrategy extends AnalysisStrategy {
-  async analyze(url) {
-    return await this.liveUIAnalyzer.analyzeForm(url);
-  }
-}
-
-class FileBasedStrategy extends AnalysisStrategy {
-  async analyze(htmlContent) {
-    return await this.llmProvider.analyzeHTML(htmlContent);
-  }
-}
-```
-
-### **2. Factory Pattern - LLM Providers**
-
-```javascript
-class LLMProviderFactory {
-  static create(provider) {
-    switch (provider) {
-      case "ollama":
-        return new OllamaProvider();
-      case "bedrock":
-        return new BedrockProvider();
-      case "openai":
-        return new OpenAIProvider();
-      default:
-        throw new Error(`Unknown provider: ${provider}`);
-    }
-  }
-}
-```
-
-### **3. Observer Pattern - Event System**
-
-```javascript
-class AgentOrchestrator extends EventEmitter {
+// Main entry point for all operations
+class UnifiedTestRunner {
   constructor() {
-    super();
-    this.agents = new Map();
-  }
-
-  registerAgent(name, agent) {
-    this.agents.set(name, agent);
-    agent.on("result", (data) => {
-      this.emit("agentResult", { agent: name, data });
-    });
-  }
-}
-```
-
-## 🔮 **Advanced Features**
-
-### **1. Multi-Step Form Analysis**
-
-```javascript
-class MultiStepAnalyzer {
-  async analyzeWorkflow(startUrl) {
-    const steps = [];
-    let currentUrl = startUrl;
-
-    while (currentUrl) {
-      const stepAnalysis = await this.analyzeStep(currentUrl);
-      steps.push(stepAnalysis);
-      currentUrl = stepAnalysis.nextStep;
-    }
-
-    return {
-      workflow: steps,
-      totalSteps: steps.length,
-      criticalPaths: this.identifyCriticalPaths(steps),
+    this.providerManager = new ProviderManager();
+    this.testResults = {
+      /* ... */
     };
   }
-}
-```
 
-### **2. Dynamic Validation Detection**
+  // Health check all providers
+  async healthCheck() {
+    /* ... */
+  }
 
-```javascript
-class ValidationRuleDetector {
-  async detectDynamicRules(page) {
-    // Inject validation detection script
-    await page.addScriptTag({
-      content: `
-        window.validationRules = [];
-        const originalSetCustomValidity = HTMLElement.prototype.setCustomValidity;
-        HTMLElement.prototype.setCustomValidity = function(message) {
-          window.validationRules.push({
-            element: this.name || this.id,
-            message: message,
-            timestamp: Date.now()
-          });
-          return originalSetCustomValidity.call(this, message);
-        };
-      `,
-    });
+  // Run E2E tests
+  async runE2ETest(provider, model) {
+    /* ... */
+  }
 
-    // Trigger various inputs to capture validation
-    await this.simulateUserInteractions(page);
-
-    // Extract captured validation rules
-    const rules = await page.evaluate(() => window.validationRules);
-    return this.processValidationRules(rules);
+  // Clean all test data
+  async cleanAll() {
+    /* ... */
   }
 }
 ```
 
-### **3. Business Logic Inference**
-
-```javascript
-class BusinessLogicAnalyzer {
-  analyzeBusinessRules(formContext, userInteractions) {
-    const rules = [];
-
-    // Age-based restrictions
-    if (this.hasAgeField(formContext)) {
-      rules.push({
-        type: "age_restriction",
-        condition: "age >= 18",
-        message: "Must be 18 or older",
-      });
-    }
-
-    // Conditional field requirements
-    const conditionalFields = this.detectConditionalFields(formContext);
-    rules.push(...conditionalFields);
-
-    return rules;
-  }
-}
-```
-
-## 🧪 **Test Generation Engine**
-
-### **Modern Playwright Patterns**
-
-```javascript
-// server/prompts.js - TEST_CODE_GENERATOR
-const TEST_CODE_GENERATOR = {
-  buildPrompt: (formContext, description, acceptanceCriteria) => {
-    return `Generate modern Playwright test code using these patterns:
-
-    REQUIRED PATTERNS:
-    1. Use page.locator() instead of page.$() or page.$$()
-    2. Use .fill('') instead of .type() for inputs
-    3. Use expect(locator).toBeVisible() for assertions
-    4. Use proper async/await patterns
-    5. Include proper error handling
-
-    FORM CONTEXT:
-    ${JSON.stringify(formContext, null, 2)}
-
-    Generate comprehensive test scenarios:
-    - Valid input testing
-    - Required field validation
-    - Business rule enforcement
-    - Error message verification
-    - Edge case handling`;
-  },
-};
-```
-
-### **Generated Code Quality**
-
-```javascript
-// Example of generated modern Playwright code
-const { test, expect } = require("@playwright/test");
-
-test("Policy form validation", async ({ page }) => {
-  await page.goto("http://localhost:3000/policy-form.html");
-
-  // Test age validation (modern patterns)
-  const dobInput = page.locator("#dob");
-  await dobInput.fill("2010-01-01"); // Too young
-
-  const submitButton = page.locator("#submit");
-  await submitButton.click();
-
-  // Modern assertion pattern
-  const errorMessage = page.locator(".error-message");
-  await expect(errorMessage).toBeVisible();
-  await expect(errorMessage).toHaveText("You must be at least 18 years old");
-});
-```
-
-## 📊 **Performance Considerations**
-
-### **1. Analysis Performance**
-
-- **Live UI**: ~2-5 seconds per form
-- **File-based**: ~1-3 seconds per form
-- **Memory usage**: ~50-100MB per analysis
-- **Concurrent analysis**: Limited by LLM provider rate limits
-
-### **2. Optimization Strategies**
-
-```javascript
-// Caching analysis results
-class AnalysisCache {
-  constructor() {
-    this.cache = new Map();
-  }
-
-  getCacheKey(input) {
-    return crypto.createHash("md5").update(JSON.stringify(input)).digest("hex");
-  }
-
-  async getOrAnalyze(input, analyzer) {
-    const key = this.getCacheKey(input);
-    if (this.cache.has(key)) {
-      return this.cache.get(key);
-    }
-
-    const result = await analyzer.analyze(input);
-    this.cache.set(key, result);
-    return result;
-  }
-}
-```
-
-### **3. Scaling Considerations**
-
-- **Horizontal scaling**: Multiple server instances
-- **Load balancing**: Distribute analysis requests
-- **Queue management**: Handle high-volume requests
-- **Resource monitoring**: Track memory and CPU usage
-
-## 🔧 **Extension Points**
-
-### **1. Adding New Analysis Methods**
-
-```javascript
-// Implement new analysis strategy
-class CustomAnalysisStrategy extends AnalysisStrategy {
-  async analyze(input) {
-    // Your custom analysis logic
-    return {
-      forms: [],
-      fields: [],
-      validationRules: [],
-    };
-  }
-}
-
-// Register in orchestrator
-orchestrator.registerAnalysisMethod("custom", new CustomAnalysisStrategy());
-```
-
-### **2. Adding New LLM Providers**
-
-```javascript
-class CustomLLMProvider extends LLMProvider {
-  async generate(prompt, options = {}) {
-    // Your LLM integration
-    const response = await this.customLLMAPI.generate(prompt);
-    return response.text;
-  }
-}
-
-// Register provider
-LLMProviderFactory.register("custom", CustomLLMProvider);
-```
-
-### **3. Adding New Test Frameworks**
-
-```javascript
-class CypressTestGenerator extends TestGenerator {
-  generateTest(formContext, scenarios) {
-    return `
-      describe('Form Tests', () => {
-        it('validates required fields', () => {
-          cy.visit('${formContext.url}');
-          cy.get('#${formContext.fields[0].id}').type('invalid');
-          cy.get('#submit').click();
-          cy.get('.error').should('be.visible');
-        });
-      });
-    `;
-  }
-}
-```
-
-## 🏷️ **Data Structures**
-
-### **FormContext Structure**
-
-```typescript
-interface FormContext {
-  url?: string;
-  htmlContent?: string;
-  forms: Form[];
-  analysisMethod: "live-ui" | "file-based";
-  timestamp: number;
-}
-
-interface Form {
-  id: string;
-  action: string;
-  method: string;
-  fields: Field[];
-  validationRules: ValidationRule[];
-}
-
-interface Field {
-  id: string;
-  name: string;
-  type: string;
-  required: boolean;
-  validation: ValidationRule[];
-  dependencies: FieldDependency[];
-}
-
-interface ValidationRule {
-  type: "required" | "minLength" | "maxLength" | "pattern" | "custom";
-  value: any;
-  message: string;
-}
-```
-
-### **Analysis Result Structure**
-
-```typescript
-interface AnalysisResult {
-  formContext: FormContext;
-  testScenarios: TestScenario[];
-  recommendations: TestRecommendation[];
-  riskAssessment: RiskAssessment;
-  coverage: CoverageReport;
-}
-
-interface TestScenario {
-  name: string;
-  type: "positive" | "negative" | "edge_case";
-  steps: TestStep[];
-  assertions: Assertion[];
-}
-```
-
-## 🎯 **Best Practices for Developers**
-
-### **1. Code Organization**
-
-- Keep analysis logic separate from UI logic
-- Use dependency injection for better testability
-- Implement proper error handling and logging
-- Follow single responsibility principle
-
-### **2. Testing Strategy**
-
-- Unit tests for individual components
-- Integration tests for analysis workflows
-- E2E tests for complete user scenarios
-- Performance tests for analysis speed
-
-### **3. Error Handling**
-
-```javascript
-class RobustAnalyzer {
-  async analyze(input) {
-    try {
-      const result = await this.performAnalysis(input);
-      return this.validateResult(result);
-    } catch (error) {
-      this.logger.error("Analysis failed", { error, input });
-      throw new AnalysisError("Failed to analyze input", error);
-    }
-  }
-}
-```
-
-### **4. Logging and Monitoring**
-
-```javascript
-const logger = {
-  info: (message, data) => console.log(`[INFO] ${message}`, data),
-  error: (message, data) => console.error(`[ERROR] ${message}`, data),
-  debug: (message, data) => console.debug(`[DEBUG] ${message}`, data),
-};
-
-// Usage
-logger.info("Starting analysis", { method: "live-ui", url });
-```
-
-## 🔄 **Future Roadmap**
-
-### **Phase 1: Core Enhancements**
-
-- [ ] Advanced UI Analyzer full integration
-- [ ] Multi-framework support (Cypress, Selenium)
-- [ ] Enhanced error handling and recovery
-- [ ] Performance optimizations
-
-### **Phase 2: Advanced Features**
-
-- [ ] Visual regression testing
-- [ ] API testing integration
-- [ ] Multi-language support
-- [ ] Cloud deployment options
-
-### **Phase 3: Enterprise Features**
-
-- [ ] User management and authentication
-- [ ] Team collaboration features
-- [ ] Advanced reporting and analytics
-- [ ] Integration with popular CI/CD platforms
-
-## 🛠️ **Development Setup**
-
-### **Local Development**
+**Usage Examples:**
 
 ```bash
-# Clone and setup
-git clone <repository>
-cd agentic-testing
-cd server && npm install
+# Health check all providers
+node dev-tools/unified-test-runner.js --health-check --all-providers
 
-# Start development server
-npm run dev
+# E2E test with specific provider
+node dev-tools/unified-test-runner.js --e2e --bedrock-claude4
 
-# Run tests
-npm test
-
-# Run specific test suite
-npm run test:unit
-npm run test:integration
+# Clean all test data
+node dev-tools/unified-test-runner.js --clean-all
 ```
 
-### **Contributing Guidelines**
+### **2. Provider System** (`providers/`)
 
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Follow coding standards and add tests
-4. Commit changes: `git commit -m 'Add amazing feature'`
-5. Push to branch: `git push origin feature/amazing-feature`
-6. Create pull request
+Modular LLM provider architecture with standardized interface:
+
+#### **BaseProvider** (`providers/BaseProvider.js`)
+
+Abstract base class defining the interface:
+
+```javascript
+class BaseProvider {
+  constructor(config) {
+    /* ... */
+  }
+
+  // Must be implemented by subclasses
+  async initialize() {
+    /* ... */
+  }
+  async isAvailable() {
+    /* ... */
+  }
+  async call({ prompt, system, temperature, model }) {
+    /* ... */
+  }
+
+  // Built-in utilities
+  async test() {
+    /* Health check */
+  }
+  _validateParams() {
+    /* Parameter validation */
+  }
+  _parseResponse() {
+    /* Response parsing */
+  }
+  _handleError() {
+    /* Error handling */
+  }
+}
+```
+
+#### **Provider Implementations**
+
+**BedrockProvider** (`providers/BedrockProvider.js`):
+
+- AWS Bedrock integration with Claude 4 optimization
+- Inference profiles for cost optimization
+- Anti-narrative system prompts
+- Custom parser for clean code extraction
+
+**OllamaProvider** (`providers/OllamaProvider.js`):
+
+- Local Ollama model support (Qwen, Llama, etc.)
+- No API key required
+- Streaming response support
+- Custom timeout handling
+
+**GroqProvider, OpenAIProvider, AnthropicProvider**:
+
+- Cloud API integrations
+- Rate limiting and error handling
+- Standardized parameter mapping
+- Cost tracking and monitoring
+
+#### **ProviderManager** (`providers/index.js`)
+
+Factory and management system:
+
+```javascript
+class ProviderManager {
+  constructor() {
+    this.providers = new Map();
+    this.currentProvider = null;
+  }
+
+  // Get specific provider
+  getProvider(name) {
+    /* ... */
+  }
+
+  // Get all available providers
+  getAvailableProviders() {
+    /* ... */
+  }
+
+  // Health check all providers
+  async healthCheckAll() {
+    /* ... */
+  }
+}
+```
+
+### **3. Core Utilities** (`utils.js`)
+
+Unified LLM calling interface:
+
+```javascript
+// Main dispatcher function
+async function callLLM({ prompt, system, temperature, provider, model }) {
+  const providerManager = new ProviderManager();
+  const selectedProvider = providerManager.getProvider(provider);
+  return await selectedProvider.call({ prompt, system, temperature, model });
+}
+```
+
+## 🚀 **Key Features**
+
+### **Anti-Narrative Prompt System**
+
+All providers use optimized prompts for direct code output:
+
+```javascript
+// Example system prompt (BedrockProvider)
+const ANTI_NARRATIVE_SYSTEM = `
+You are a code generator. Output ONLY the requested code.
+NO explanations, NO comments, NO narrative text.
+Just pure, clean, functional code.
+`;
+```
+
+### **Custom Response Parsers**
+
+Each provider has custom parsers to extract clean code:
+
+````javascript
+// Example parser (BedrockProvider)
+_parseResponse(response) {
+    // Remove common narrative patterns
+    let cleaned = response
+        .replace(/^Here's.*?:|^This.*?:|^The.*?:/gm, '')
+        .replace(/```javascript|```js|```/g, '')
+        .replace(/\/\*.*?\*\//gs, '')
+        .trim();
+
+    return cleaned;
+}
+````
+
+### **Health Check System**
+
+Built-in monitoring for all providers:
+
+```javascript
+// Health check with cost tracking
+const healthResult = await provider.test();
+console.log({
+  success: healthResult.success,
+  provider: healthResult.provider,
+  model: healthResult.model,
+  cost: healthResult.cost,
+  tokens: healthResult.tokens,
+});
+```
+
+### **Cost and Token Tracking**
+
+Real-time monitoring of LLM usage:
+
+```javascript
+// Example cost tracking (BedrockProvider)
+const tokensUsed = response.usage.totalTokens;
+const estimatedCost = (tokensUsed / 1000) * 0.008; // Example rate
+console.log(`Tokens: ${tokensUsed}, Cost: $${estimatedCost}`);
+```
+
+## 📁 **File Structure**
+
+```
+server/
+├── providers/                  # Modular LLM providers
+│   ├── BaseProvider.js        # Abstract base class
+│   ├── BedrockProvider.js     # AWS Bedrock (Claude 4)
+│   ├── OllamaProvider.js      # Local Ollama models
+│   ├── GroqProvider.js        # Groq Cloud API
+│   ├── OpenAIProvider.js      # OpenAI API
+│   ├── AnthropicProvider.js   # Anthropic API
+│   └── index.js               # ProviderManager
+├── dev-tools/                 # Testing orchestration
+│   ├── unified-test-runner.js # Main orchestrator
+│   ├── README.js              # Complete documentation
+│   ├── unified-architecture-success.js # Summary
+│   ├── refactor-summary.js    # Refactor docs
+│   └── claude4-optimization-summary.js # Claude 4 docs
+├── utils.js                   # Core utilities (callLLM)
+├── index.js                   # Server entry point
+└── package.json               # Dependencies
+```
+
+## 🎯 **Testing Workflow**
+
+1. **Health Check**: Verify provider availability and credentials
+2. **Code Generation**: Generate test code using anti-narrative prompts
+3. **Parsing**: Extract clean code using custom parsers
+4. **Validation**: Syntax check and basic validation
+5. **Execution**: Run generated tests with Playwright
+6. **Reporting**: Standardized results with cost/token metrics
+
+## 💡 **Best Practices**
+
+### **Adding New Providers**
+
+1. Extend `BaseProvider` class
+2. Implement required methods (`initialize`, `isAvailable`, `call`)
+3. Add anti-narrative system prompts
+4. Create custom response parser
+5. Add to `ProviderManager`
+6. Test with `unified-test-runner.js`
+
+### **Using Anti-Narrative Prompts**
+
+```javascript
+// Good: Specific, direct request
+const prompt = "Generate Playwright test code for form validation";
+const system = "Output only code. No explanations.";
+
+// Bad: Allows narrative response
+const prompt = "Can you help me create a test?";
+const system = "You are a helpful assistant.";
+```
+
+### **Error Handling**
+
+All providers use standardized error handling:
+
+```javascript
+try {
+  const result = await provider.call({ prompt, system });
+  return result;
+} catch (error) {
+  // Standardized error handling in BaseProvider
+  throw new Error(`${provider.name} failed: ${error.message}`);
+}
+```
+
+## 🔧 **Configuration**
+
+### **Environment Variables**
+
+```bash
+# AWS Bedrock
+AWS_REGION=ap-southeast-1
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+
+# Groq
+GROQ_API_KEY=your_key
+
+# OpenAI
+OPENAI_API_KEY=your_key
+
+# Anthropic
+ANTHROPIC_API_KEY=your_key
+
+# Ollama (local)
+OLLAMA_BASE_URL=http://localhost:11434
+```
+
+### **Provider Configuration**
+
+```javascript
+// Example provider config
+const providerConfig = {
+  name: "AWS Bedrock",
+  defaultModel: "apac.anthropic.claude-sonnet-4-20250514-v1:0",
+  timeout: 120000,
+  maxTokens: 4000,
+  requiresApiKey: true,
+};
+```
+
+## 📊 **Monitoring and Observability**
+
+### **Health Metrics**
+
+- Provider availability status
+- Response time monitoring
+- Error rate tracking
+- Cost per request
+
+### **Usage Metrics**
+
+- Token consumption
+- Request volume
+- Success/failure rates
+- Cost analysis
+
+## 🚀 **Future Enhancements**
+
+1. **Caching Layer**: Cache expensive LLM calls
+2. **Load Balancing**: Distribute requests across providers
+3. **Circuit Breaker**: Handle provider failures gracefully
+4. **Metrics Dashboard**: Real-time monitoring UI
+5. **Auto-Scaling**: Dynamic provider selection based on load
+
+## ✅ **Architecture Benefits**
+
+🎯 **Centralized**: Single entry point for all operations  
+🔧 **Modular**: Easy to add/remove providers  
+🧹 **Clean**: Anti-narrative, direct code output  
+📊 **Observable**: Health checks and cost monitoring  
+💰 **Cost-Aware**: Token usage and cost tracking  
+🔒 **Robust**: Standardized error handling  
+🚀 **Scalable**: Production-ready architecture
 
 ---
 
-**This architecture is designed to be extensible, maintainable, and production-ready. For hands-on development, check the [Dev Tools Guide](../server/dev-tools/HOW_TO.md).**
+**For complete usage examples and documentation, run:**
+
+```bash
+node server/dev-tools/README.js
+```

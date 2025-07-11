@@ -1,255 +1,20 @@
 /**
- * CONSOLIDATED UTILITIES
- * All utility functions, parsers, and helpers in one place
- * Combines utils/callLLM + utils/PlaywrightParser + framework helpers + progress tracking
+ * CONSOLIDATED UTILITIES - REFACTORED
+ * Simplified utilities with modular provider system
+ * Now uses providers/ directory for scalable LLM management
  */
 
-const axios = require("axios");
-const {
-  BedrockRuntimeClient,
-  InvokeModelCommand,
-} = require("@aws-sdk/client-bedrock-runtime");
+const { providerManager } = require("./providers");
 const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
 
 // =============================================================================
-// LLM PROVIDERS & CALLING
+// LLM INTERFACE - SIMPLIFIED
 // =============================================================================
 
-// Provider configurations
-const PROVIDERS = {
-  ollama: {
-    name: "Ollama",
-    handler: null, // Will be set below
-    available: true,
-    defaultModel: "qwen2.5-coder:7b",
-    description: "Local Ollama server (default)",
-  },
-
-  bedrock: {
-    name: "AWS Bedrock",
-    handler: null, // Will be set below
-    available: false,
-    defaultModel: "us.anthropic.claude-3-haiku-20240307-v1:0",
-    description: "AWS Bedrock Claude",
-  },
-};
-
-const DEFAULT_PROVIDER = process.env.LLM_PROVIDER || "ollama"; // Change default to bedrock if available
-let DEFAULT_MODEL = process.env.LLM_MODEL;
-
-let currentProvider = DEFAULT_PROVIDER;
-let providerHandlers = {};
-
 /**
- * Ollama LLM Implementation
- */
-async function callOllamaLLM({
-  prompt,
-  system = "",
-  temperature = 0.3,
-  model = "qwen2.5-coder:7b",
-}) {
-  const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
-  const requestBody = {
-    model,
-    prompt: system ? `${system}\n\n${prompt}` : prompt,
-    stream: false,
-    options: {
-      temperature: Math.max(0, Math.min(1, temperature)),
-      num_predict: 4000,
-    },
-  };
-
-  console.log(`Calling Ollama API with model: ${model} ${temperature}`);
-
-  try {
-    const response = await axios.post(
-      `${ollamaUrl}/api/generate`,
-      requestBody,
-      {
-        timeout: 300000,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-
-    if (!response.data?.response) {
-      throw new Error("Invalid response from Ollama API");
-    }
-
-    return response.data.response.trim();
-  } catch (error) {
-    if (error.code === "ECONNREFUSED") {
-      throw new Error(
-        "Cannot connect to Ollama server. Make sure Ollama is running on http://localhost:11434"
-      );
-    }
-    throw new Error(`Ollama API call failed: ${error.message}`);
-  }
-}
-
-/**
- * Bedrock Claude Implementation
- */
-async function callBedrockClaude({
-  prompt,
-  system = "",
-  temperature = 0.3,
-  model = null,
-  maxTokens = 4000,
-}) {
-  const DEFAULT_CONFIG = {
-    region: process.env.AWS_REGION || "us-east-1",
-    model: "us.anthropic.claude-3-haiku-20240307-v1:0",
-    maxTokens: 4000,
-    temperature: 0.3,
-  };
-
-  const CLAUDE_MODELS = {
-    "claude-3-sonnet": "us.anthropic.claude-3-sonnet-20240229-v1:0",
-    "claude-3-haiku": "us.anthropic.claude-3-haiku-20240307-v1:0",
-    "claude-3-opus": "us.anthropic.claude-3-opus-20240229-v1:0",
-    "claude-3.5-sonnet": "us.anthropic.claude-3-5-sonnet-20240620-v1:0",
-  };
-
-  function getModelId(modelName) {
-    if (!modelName) return DEFAULT_CONFIG.model;
-    if (modelName.includes("anthropic.claude")) return modelName;
-    return CLAUDE_MODELS[modelName.toLowerCase()] || DEFAULT_CONFIG.model;
-  }
-
-  try {
-    const config = { region: DEFAULT_CONFIG.region };
-    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
-      config.credentials = {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        sessionToken: process.env.AWS_SESSION_TOKEN,
-      };
-    }
-
-    const client = new BedrockRuntimeClient(config);
-    const modelId = getModelId(model);
-
-    const messageFormat = {
-      system: system.trim(),
-      messages: [{ role: "user", content: prompt }],
-    };
-
-    const requestBody = {
-      max_tokens: maxTokens,
-      temperature: Math.max(0, Math.min(1, temperature)),
-      ...messageFormat,
-    };
-
-    console.log(
-      `[BedrockClaude4] Calling ${modelId} with ${requestBody.messages.length} messages`
-    );
-
-    const command = new InvokeModelCommand({
-      modelId,
-      contentType: "application/json",
-      accept: "application/json",
-      body: JSON.stringify(requestBody),
-    });
-
-    const response = await client.send(command);
-    if (!response.body) throw new Error("Empty response from Bedrock");
-
-    const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-    if (!responseBody.content?.[0]?.text)
-      throw new Error("No text content in Claude response");
-
-    const result = responseBody.content[0].text.trim();
-    console.log(`[BedrockClaude4] Generated ${result.length} characters`);
-
-    return result;
-  } catch (error) {
-    const errorMap = {
-      ValidationException: `Bedrock validation error: ${error.message}`,
-      ResourceNotFoundException: `Bedrock model not found: ${error.message}`,
-      AccessDeniedException: `Bedrock access denied: Check AWS credentials and permissions`,
-      ThrottlingException: `Bedrock throttled: ${error.message}`,
-      ServiceQuotaExceededException: `Bedrock quota exceeded: ${error.message}`,
-    };
-
-    throw new Error(
-      errorMap[error.name] || `Bedrock call failed: ${error.message}`
-    );
-  }
-}
-
-/**
- * Initialize provider handlers
- */
-function initializeProviders() {
-  console.log("[callLLM] Initializing LLM providers...");
-
-  // Always initialize Ollama handler first
-  providerHandlers.ollama = callOllamaLLM;
-  PROVIDERS.ollama.handler = callOllamaLLM;
-
-  // Test Ollama connection
-  const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
-  console.log(`[callLLM] Testing Ollama connection at ${ollamaUrl}...`);
-
-  // Initialize Bedrock if credentials are available
-  if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
-    try {
-      providerHandlers.bedrock = callBedrockClaude;
-      PROVIDERS.bedrock.available = true;
-      PROVIDERS.bedrock.handler = callBedrockClaude;
-      console.log(
-        "[callLLM] Bedrock provider initialized with AWS credentials"
-      );
-    } catch (error) {
-      console.warn(
-        "[callLLM] Bedrock provider initialization failed:",
-        error.message
-      );
-      PROVIDERS.bedrock.available = false;
-    }
-  } else {
-    console.warn(
-      "[callLLM] Bedrock provider not available: Missing AWS credentials"
-    );
-    PROVIDERS.bedrock.available = false;
-  }
-
-  // Determine the best default provider
-  if (PROVIDERS.bedrock.available) {
-    console.log(
-      "[callLLM] Setting Bedrock as default provider (AWS credentials available)"
-    );
-    currentProvider = "bedrock";
-    if (!DEFAULT_MODEL) {
-      DEFAULT_MODEL = PROVIDERS.bedrock.defaultModel;
-    }
-  } else {
-    console.log("[callLLM] Using Ollama as default provider");
-    currentProvider = "ollama";
-    if (!DEFAULT_MODEL) {
-      DEFAULT_MODEL = PROVIDERS.ollama.defaultModel;
-    }
-  }
-
-  console.log(
-    "[callLLM] Available providers:",
-    Object.entries(PROVIDERS)
-      .filter(([, config]) => config.available)
-      .map(([name]) => name)
-  );
-
-  console.log("[callLLM] Current provider:", currentProvider);
-  console.log(
-    "[callLLM] Default model:",
-    DEFAULT_MODEL || PROVIDERS[currentProvider]?.defaultModel
-  );
-}
-
-/**
- * Universal LLM call function
+ * Universal LLM call function - now delegates to ProviderManager
  */
 async function callLLM({
   prompt,
@@ -258,165 +23,147 @@ async function callLLM({
   model = null,
   provider = null,
 }) {
-  if (!prompt || typeof prompt !== "string" || prompt.trim() === "") {
-    throw new Error("Invalid prompt: must be a non-empty string");
-  }
+  return await providerManager.call({
+    prompt,
+    system,
+    temperature,
+    model,
+    provider,
+  });
+}
 
-  const targetProvider = provider || currentProvider;
-  if (!providerHandlers[targetProvider]) {
-    throw new Error(
-      `Provider '${targetProvider}' not available. Available providers: ${Object.keys(
-        providerHandlers
-      ).join(", ")}`
-    );
-  }
-
-  const targetModel =
-    model || DEFAULT_MODEL || PROVIDERS[targetProvider]?.defaultModel;
-  console.log(
-    `[callLLM] Using provider: ${targetProvider}, model: ${targetModel}`
-  );
-
-  try {
-    const response = await providerHandlers[targetProvider]({
-      prompt,
-      system,
-      temperature,
-      model: targetModel,
-    });
-
-    if (!response || typeof response !== "string") {
-      throw new Error("Invalid response from LLM provider");
-    }
-
-    return response.trim();
-  } catch (error) {
-    console.error(`[callLLM] ${targetProvider} call failed:`, error.message);
-
-    // Try fallback to other available providers
-    const fallbackProviders = Object.keys(providerHandlers).filter(
-      (p) => p !== targetProvider
-    );
-
-    for (const fallbackProvider of fallbackProviders) {
-      if (PROVIDERS[fallbackProvider]?.available) {
-        console.log(`[callLLM] Attempting fallback to ${fallbackProvider}...`);
-        try {
-          return await providerHandlers[fallbackProvider]({
-            prompt,
-            system,
-            temperature,
-            model: PROVIDERS[fallbackProvider].defaultModel,
-          });
-        } catch (fallbackError) {
-          console.warn(
-            `[callLLM] Fallback to ${fallbackProvider} also failed:`,
-            fallbackError.message
-          );
-          continue;
-        }
-      }
-    }
-
-    throw new Error(
-      `All LLM providers failed. Primary error: ${error.message}. Please check your configuration.`
-    );
-  }
+/**
+ * Initialize all providers
+ */
+async function initializeProviders() {
+  return await providerManager.initialize();
 }
 
 /**
  * Switch active provider
  */
-function switchProvider(providerName) {
-  if (!PROVIDERS[providerName]) {
-    throw new Error(
-      `Unknown provider: ${providerName}. Available: ${Object.keys(
-        PROVIDERS
-      ).join(", ")}`
-    );
-  }
-
-  if (!PROVIDERS[providerName].available) {
-    throw new Error(
-      `Provider ${providerName} is not available. Check configuration.`
-    );
-  }
-
-  currentProvider = providerName;
-  console.log(`[callLLM] Switched to provider: ${providerName}`);
+async function switchProvider(providerName) {
+  return await providerManager.switchProvider(providerName);
 }
 
 /**
  * Get available providers
  */
 function getAvailableProviders() {
-  return Object.entries(PROVIDERS)
-    .filter(([name, config]) => config.available)
-    .map(([name, config]) => ({
-      name,
-      description: config.description,
-      defaultModel: config.defaultModel,
-      isCurrent: name === currentProvider,
-    }));
+  return providerManager.getAvailableProviders();
 }
 
 /**
  * Get current provider info
  */
 function getCurrentProvider() {
-  return {
-    name: currentProvider,
-    ...PROVIDERS[currentProvider],
-    model: DEFAULT_MODEL,
-  };
+  return providerManager.getCurrentProvider();
 }
 
 /**
  * Test provider connection
  */
-async function testProvider(providerName = currentProvider) {
-  if (!providerHandlers[providerName]) {
-    throw new Error(`Provider ${providerName} not available`);
+async function testProvider(providerName = null) {
+  if (providerName) {
+    return await providerManager.testProvider(providerName);
   }
-
-  try {
-    const testResponse = await providerHandlers[providerName]({
-      prompt: 'Respond with just "OK" to confirm connection.',
-      system: "You are testing the connection. Respond briefly.",
-      temperature: 0.1,
-      model: PROVIDERS[providerName].defaultModel,
-    });
-
-    return {
-      success: true,
-      provider: providerName,
-      response: testResponse.substring(0, 100),
-      model: PROVIDERS[providerName].defaultModel,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      provider: providerName,
-      error: error.message,
-    };
-  }
+  return await providerManager.healthCheck();
 }
 
-// Initialize on module load
-initializeProviders();
+/**
+ * Legacy compatibility - check Ollama availability
+ */
+async function checkOllamaAvailability() {
+  const providers = providerManager.getAvailableProviders();
+  const ollama = providers.find((p) => p.name === "Ollama Local");
+
+  if (ollama) {
+    return { available: true, reason: "Ollama is available" };
+  }
+
+  return { available: false, reason: "Ollama not initialized or not running" };
+}
+
+/**
+ * Show Ollama setup prompt (legacy compatibility)
+ */
+async function promptOllamaSetup() {
+  console.log("\n" + "=".repeat(60));
+  console.log("🤖 OLLAMA FALLBACK SETUP");
+  console.log("=".repeat(60));
+  console.log("For reliable fallback, please install Ollama:");
+  console.log("");
+  console.log("📋 Quick setup:");
+  console.log("   1. Install: https://ollama.com/download");
+  console.log("   2. Pull model: ollama pull qwen3:8b");
+  console.log("   3. Start: ollama serve");
+  console.log("");
+  console.log("💡 System will continue with available cloud providers.");
+  console.log("=".repeat(60));
+}
+
+/**
+ * Auto-install Ollama model (legacy compatibility)
+ */
+async function autoInstallOllamaModel(modelName) {
+  const providers = providerManager.getAvailableProviders();
+  const ollama = providers.find((p) => p.name === "Ollama Local");
+
+  if (ollama) {
+    try {
+      const provider = providerManager.providers.get("ollama");
+      return await provider.installModel(modelName);
+    } catch (error) {
+      console.warn(`Failed to auto-install model ${modelName}:`, error.message);
+      return false;
+    }
+  }
+
+  return false;
+}
+
+// Legacy PROVIDERS object for backward compatibility
+const PROVIDERS = {
+  groq: {
+    name: "Groq Cloud",
+    defaultModel: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
+    description: "Groq Cloud API with high-speed inference",
+  },
+  openai: {
+    name: "OpenAI",
+    defaultModel: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    description: "OpenAI GPT models",
+  },
+  anthropic: {
+    name: "Anthropic Claude",
+    defaultModel: process.env.ANTHROPIC_MODEL || "claude-3-haiku-20240307",
+    description: "Anthropic Claude models",
+  },
+  ollama: {
+    name: "Ollama Local",
+    defaultModel: process.env.OLLAMA_MODEL || "qwen3:8b",
+    description: "Local Ollama server (fallback)",
+  },
+  bedrock: {
+    name: "AWS Bedrock",
+    defaultModel:
+      process.env.BEDROCK_MODEL || "us.anthropic.claude-3-haiku-20240307-v1:0",
+    description: "AWS Bedrock managed models",
+  },
+};
 
 // =============================================================================
 // PLAYWRIGHT PARSER
 // =============================================================================
 
 /**
- * Playwright Parser - Extracts and validates Playwright test code from LLM responses
+ * Playwright Parser - Optimized for Playwright TypeScript code generation
  */
 class PlaywrightParser {
   parse(response, options = {}) {
     try {
-      const code = this._extractCode(response);
-      const validation = this._validateCode(code);
+      const code = this._extractPlaywrightCode(response);
+      const validation = this._validatePlaywrightCode(code);
 
       return {
         code,
@@ -425,59 +172,132 @@ class PlaywrightParser {
           originalLength: response.length,
           codeLength: code.length,
           extractedAt: new Date().toISOString(),
+          framework: "playwright",
+          language: this._detectLanguage(code),
         },
       };
     } catch (error) {
       return {
-        code: this.generateFallbackTest(
+        code: this.generatePlaywrightFallbackTest(
           options.formAnalysis || {},
           options.testUrl || ""
         ),
         validation: { isValid: false, issues: [error.message], warnings: [] },
-        metadata: { source: "fallback", error: error.message },
+        metadata: {
+          source: "fallback",
+          error: error.message,
+          framework: "playwright",
+        },
       };
     }
   }
 
-  _extractCode(response) {
-    // Remove markdown code blocks only
+  _extractPlaywrightCode(response) {
+    // Remove markdown code blocks and explanatory text
     let code = response
+      .replace(/```typescript\n?/g, "")
       .replace(/```javascript\n?/g, "")
+      .replace(/```ts\n?/g, "")
       .replace(/```js\n?/g, "")
       .replace(/```\n?/g, "");
 
-    // Find the start of actual test code
-    const testStart =
-      code.indexOf("const { test, expect }") !== -1
-        ? code.indexOf("const { test, expect }")
-        : code.indexOf("test(");
+    // Find Playwright-specific imports
+    const playwrightImportPatterns = [
+      /import\s+.*from\s+['"]@playwright\/test['"]/,
+      /const\s+{\s*test,\s*expect\s*}\s*=\s*require\(['"]@playwright\/test['"]\)/,
+      /import\s+{\s*test,\s*expect.*}\s+from\s+['"]@playwright\/test['"]/,
+    ];
+
+    let testStart = -1;
+    for (const pattern of playwrightImportPatterns) {
+      const match = code.search(pattern);
+      if (match !== -1) {
+        testStart = match;
+        break;
+      }
+    }
+
+    // If no Playwright imports found, look for test functions
+    if (testStart === -1) {
+      testStart = code.search(/test\s*\(|test\.describe\s*\(/);
+    }
 
     if (testStart === -1) {
       throw new Error("No Playwright test code found");
     }
 
-    // Extract from test start and trust the LLM to give clean code
+    // Extract from test start and clean up
     return code.substring(testStart).trim();
   }
 
-  _validateCode(code) {
+  _detectLanguage(code) {
+    // Check for TypeScript-specific patterns
+    if (
+      code.includes("import") &&
+      code.includes("from") &&
+      (code.includes(": Page") ||
+        code.includes(": Locator") ||
+        code.includes("interface "))
+    ) {
+      return "typescript";
+    }
+    if (code.includes("require(") && code.includes("@playwright/test")) {
+      return "javascript";
+    }
+    return "typescript"; // Default to TypeScript for Playwright
+  }
+
+  _validatePlaywrightCode(code) {
     const issues = [];
     const warnings = [];
 
+    // Essential Playwright patterns
+    if (!code.includes("@playwright/test")) {
+      issues.push("Missing @playwright/test import");
+    }
+
     if (!code.includes("test(") && !code.includes("test.describe(")) {
-      issues.push("No test functions found");
+      issues.push("No Playwright test functions found");
     }
 
     if (!code.includes("expect(")) {
-      warnings.push("No assertions found");
+      warnings.push(
+        "No assertions found - tests should include expect() statements"
+      );
     }
 
     if (!code.includes("page.")) {
-      issues.push("No page interactions found");
+      issues.push(
+        "No page interactions found - Playwright tests need page object usage"
+      );
     }
 
-    if (!code.includes("await page.goto(")) {
-      warnings.push("No page navigation found");
+    // Modern Playwright patterns
+    if (!code.includes("page.goto(") && !code.includes("await page.goto(")) {
+      warnings.push("No page navigation found - consider adding page.goto()");
+    }
+
+    if (!code.includes("page.locator(")) {
+      warnings.push("Modern locator() method preferred over legacy selectors");
+    }
+
+    // TypeScript specific validations
+    if (this._detectLanguage(code) === "typescript") {
+      if (!code.includes("Page") || !code.includes("Locator")) {
+        warnings.push("Consider using proper TypeScript types (Page, Locator)");
+      }
+    }
+
+    // Page Object Model pattern detection
+    if (code.includes("class ") && code.includes("Page")) {
+      if (
+        !code.includes("constructor(page: Page)") &&
+        !code.includes("constructor(page)")
+      ) {
+        warnings.push(
+          "Page Object Model classes should have proper constructor"
+        );
+      }
     }
 
     return {
@@ -487,24 +307,81 @@ class PlaywrightParser {
     };
   }
 
-  generateFallbackTest(formAnalysis, testUrl) {
+  generatePlaywrightFallbackTest(formAnalysis, testUrl) {
     const url = testUrl || "http://localhost:3000";
+    const fields = formAnalysis.formFields || [];
 
-    return `const { test, expect } = require('@playwright/test');
+    // Generate TypeScript fallback with modern Playwright patterns
+    const fieldSelectors = fields
+      .map((field) => `    readonly ${field.name}Field: Locator;`)
+      .join("\n");
 
-test.describe('Form Tests', () => {
-  test('Basic form interaction', async ({ page }) => {
-    await page.goto('${url}');
+    const fieldAssignments = fields
+      .map(
+        (field) =>
+          `    this.${field.name}Field = page.locator('#${field.name}');`
+      )
+      .join("\n");
+
+    const fieldTests = fields
+      .map(
+        (field) =>
+          `  test('should validate ${field.name} field', async ({ page }) => {
+    const formPage = new FormPage(page);
+    await formPage.goto();
     
-    // Wait for form to load
-    await page.waitForSelector('form', { timeout: 10000 });
+    // Test ${field.name} validation
+    await formPage.${field.name}Field.fill('');
+    await formPage.submitForm();
     
-    // Basic form submission test
-    await page.click('button[type="submit"]');
+    // Check for validation error
+    await expect(page.locator('#${field.name}-error')).toBeVisible();
+  });`
+      )
+      .join("\n\n");
+
+    return `import { test, expect, Page, Locator } from '@playwright/test';
+
+class FormPage {
+  readonly page: Page;
+  readonly submitButton: Locator;
+${fieldSelectors}
+
+  constructor(page: Page) {
+    this.page = page;
+    this.submitButton = page.locator('button[type="submit"]');
+${fieldAssignments}
+  }
+
+  async goto(): Promise<void> {
+    await this.page.goto('${url}');
+  }
+
+  async submitForm(): Promise<void> {
+    await this.submitButton.click();
+  }
+}
+
+test.describe('Form Validation Tests', () => {
+  test('should load form successfully', async ({ page }) => {
+    const formPage = new FormPage(page);
+    await formPage.goto();
     
-    // Check for any response
-    await page.waitForTimeout(1000);
+    await expect(page.locator('form')).toBeVisible();
+    await expect(formPage.submitButton).toBeVisible();
   });
+
+${
+  fieldTests ||
+  `  test('should submit valid form', async ({ page }) => {
+    const formPage = new FormPage(page);
+    await formPage.goto();
+    await formPage.submitForm();
+    
+    // Add specific validation based on your form behavior
+    await expect(page).toHaveURL(/success|thank|confirm/);
+  });`
+}
 });`;
   }
 }
@@ -1262,22 +1139,18 @@ class TestFileManager {
 // EXPORTS
 // =============================================================================
 
-// LLM exports
-callLLM.switchProvider = switchProvider;
-callLLM.getAvailableProviders = getAvailableProviders;
-callLLM.getCurrentProvider = getCurrentProvider;
-callLLM.testProvider = testProvider;
-callLLM.PROVIDERS = PROVIDERS;
-
 module.exports = {
-  // LLM functions
+  // LLM functions - now using modular provider system
   callLLM,
   switchProvider,
   getAvailableProviders,
   getCurrentProvider,
   testProvider,
   initializeProviders,
-  PROVIDERS,
+  checkOllamaAvailability,
+  promptOllamaSetup,
+  autoInstallOllamaModel,
+  PROVIDERS, // Legacy compatibility
 
   // Parser
   PlaywrightParser,
@@ -1296,4 +1169,7 @@ module.exports = {
 
   // Helpers
   getDateForAge,
+
+  // Provider Manager (for advanced usage)
+  providerManager,
 };

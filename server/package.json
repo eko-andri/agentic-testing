@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js --ignore tests/",
-    "dev:qwen": "LLM_PROVIDER=ollama LLM_MODEL=qwen2.5-coder:7b nodemon index.js --ignore tests/",
+    "dev:qwen": "LLM_PROVIDER=ollama LLM_MODEL=qwen3:30b nodemon index.js --ignore tests/",
     "dev:bedrock": "LLM_PROVIDER=bedrock nodemon index.js --ignore tests/",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -25,7 +25,8 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "fs-extra": "^11.3.0",
-    "puppeteer": "^24.11.1"
+    "puppeteer": "^24.11.1",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
